@@ -1,5 +1,5 @@
 <?php
-
+require_once 'Utils/parametre.php';// contient les données de connexion à la base de données 
 class Model {
     /**
      * Attribut contenant l'instance PDO
@@ -17,7 +17,8 @@ class Model {
     public function __construct()
     {
         try{
-           $this->bd= new PDO('mysql:host=127.0.0.1;dbname=appli_S4', 'root','');
+            $dsn = 'pgsql:host=' . DB_HOST . ';port=' . DB_PORT . ';dbname=' . DB_NAME;
+            $this->bd = new PDO($dsn, DB_USER, DB_PASSWORD);
             $this->bd->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->bd->query("SET NAMES 'utf8'");
         }catch(PDOException $e){
