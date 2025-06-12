@@ -17,7 +17,7 @@ class Model {
     public function __construct()
     {
         try{
-           $this->bd= new PDO('mysql:host=127.0.0.1;dbname=appli', 'root','');
+           $this->bd= new PDO('mysql:host=127.0.0.1;dbname=appli_S4', 'root','');
             $this->bd->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->bd->query("SET NAMES 'utf8'");
         }catch(PDOException $e){
@@ -40,7 +40,7 @@ class Model {
    public function userExists($email)
     {
         // Préparation de la requête pour récupérer l'utilisateur et le mot de passe
-        $query = $this->bd->prepare('SELECT user_id,username, password_hash FROM Usera WHERE email = :mail');
+        $query = $this->bd->prepare('SELECT user_id,username, password_hash FROM User WHERE email = :mail');
         $query->execute([
             ':mail' => $email // On peut passer directement $email sans htmlspecialchars car déjà verifié dans la méthode execute
         ]);
@@ -56,14 +56,12 @@ class Model {
         try{
         //Préparation de la requête
         $requete = $this->bd->prepare('
-        INSERT INTO Usera (username, nom, prenom, genre, email, password_hash)
-        VALUES (:pseudo, :nom, :prenom, :genre, :mail, :pswd)');
+        INSERT INTO User (username, genre, email, password_hash)
+        VALUES (:pseudo, :genre, :mail, :pswd)');
 
         //Remplacement des marqueurs de place par les valeurs
         $success = $requete->execute([
                     ':pseudo'=>$infos['pseudo'],
-                    ':nom'=>$infos['nom'],
-                    ':prenom'=>$infos['prenom'],
                     ':genre'=>$infos['genre'],
                     ':mail'=>$infos['email'],
                     ':pswd'=> $infos['password_hash'],
@@ -79,7 +77,7 @@ class Model {
     }
 
     public function checkUser($email, $password){
-         $query = $this->bd->prepare('SELECT * FROM Usera WHERE email = :mail');
+         $query = $this->bd->prepare('SELECT * FROM User WHERE email = :mail');
          $query->execute([':mail'=>$email]);
 
         $user = $query->fetch(PDO::FETCH_ASSOC); // Retourne l'utilisateur ou false
@@ -92,7 +90,7 @@ class Model {
     public function changePseudo($pseudo){
         if (isset($_COOKIE['user_id'])){
             $id = $_COOKIE['user_id'];
-            $query = $this->bd->prepare('UPDATE Usera SET username = :pseudo WHERE user_id = :id');
+            $query = $this->bd->prepare('UPDATE User SET username = :pseudo WHERE user_id = :id');
             $query->execute([
                 ':id' =>$id,
                 ':pseudo' =>$pseudo,
@@ -103,7 +101,7 @@ class Model {
     }
 
     public function checkMdp($email,$mdp){
-        $query = $this->bd->prepare('SELECT password_hash FROM Usera WHERE email= :email');
+        $query = $this->bd->prepare('SELECT password_hash FROM User WHERE email= :email');
         $query->execute([
             ':email' =>$email
         ]);
@@ -126,7 +124,7 @@ class Model {
         }
     }
         public function changeMdp($actuel, $newmdp){
-        $query = $this->bd->prepare('UPDATE Usera SET password_hash = :newmdp WHERE password_hash = :pswd');
+        $query = $this->bd->prepare('UPDATE User SET password_hash = :newmdp WHERE password_hash = :pswd');
         $query->execute([
             ':newmdp' =>$newmdp,
             ':pswd' =>$actuel,
@@ -136,7 +134,7 @@ class Model {
      public function deconnexion(){
         if (isset($_COOKIE['user_id'])){
             $userId = $_COOKIE['user_id'];
-            $stmt = $this->bd->prepare("UPDATE Usera SET last_online_at = NOW() WHERE user_id = :user_id");
+            $stmt = $this->bd->prepare("UPDATE User SET last_online_at = NOW() WHERE user_id = :user_id");
             $stmt->execute(['user_id' => $userId]);
             return $stmt->rowCount() > 0;
         }

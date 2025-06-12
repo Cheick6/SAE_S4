@@ -33,8 +33,6 @@ class Controller_inscription extends Controller
         // Vérification si le formulaire a été soumis
         if (isset($_POST['action'])&& $_POST['action'] === 'inscription') {
         // Récupération des champs avec protection contre les injections
-            $prenom = htmlspecialchars($_POST['prenom']);
-            $nom = htmlspecialchars($_POST['nom']);
             $pseudo = htmlspecialchars($_POST['pseudo']);
             $genre = htmlspecialchars($_POST['genre']);
             $email = htmlspecialchars($_POST['email']);
@@ -49,7 +47,7 @@ class Controller_inscription extends Controller
             }
 
             // Vérification des champs
-            if (empty($prenom) || empty($nom) || empty($pseudo) || empty($genre) || empty($email) || empty($password)) {
+            if (empty($pseudo) || empty($genre) || empty($email) || empty($password)) {
                 $message = "Tous les champs doivent être remplis.";
                 $this->render('inscription', ['message' => $message]);
                 return;
@@ -71,8 +69,6 @@ class Controller_inscription extends Controller
 
             // Insertion de l'utilisateur dans la base de données
             $userData = [
-                'prenom' => $prenom,
-                'nom' => $nom,
                 'pseudo' => $pseudo,
                 'genre' => $genre,
                 'email' => $email,
