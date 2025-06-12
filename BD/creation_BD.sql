@@ -1,53 +1,47 @@
 -- Database: sae1
 
-CREATE TABLE Usera (
-    user_id SERIAL PRIMARY KEY, 
+CREATE TABLE User (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
-    nom VARCHAR(50) NOT NULL,
-    prenom VARCHAR(50) NOT NULL,
     genre CHAR(1),
     password_hash VARCHAR(255) NOT NULL,
     email VARCHAR(100) NOT NULL,
-    CONSTRAINT type_genre CHECK (genre ~* '^[FM]$') //CONSTRAINT type_genre CHECK (genre IN ('F', 'M')), -- Limite les valeurs de genre à 'F' ou 'M'
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Date et heure de création du compte, peut se remplir par défaut
-    last_online_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Date et heure de dernière connexion
+    is_online BOOLEAN,  /* Statut en ligne des utilisateurs */
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  /* Date de création du compte */
+    CHECK (genre IN ('F', 'M'))  /* Contraint le genre à 'F' ou 'M' */
 );
 
-CREATE TABLE UserStatus (
-    user_id SERIAL PRIMARY KEY, 
-    is_online BOOLEAN, 
-    last_active_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP , 
-    FOREIGN KEY (user_id) REFERENCES Usera(user_id) -- Clé étrangère référençant la table Usera
-);
-
+-- Table des conversations
 CREATE TABLE Conversation (
-    conversation_id SERIAL PRIMARY KEY, 
-    user_1_id INT, 
-    user_2_id INT, 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP , 
-    FOREIGN KEY (user_1_id) REFERENCES Usera(user_id), -- Clé étrangère référençant la table Usera
-    FOREIGN KEY (user_2_id) REFERENCES Usera(user_id) -- Clé étrangère référençant la table Usera
+    conversation_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_1_id INT NOT NULL,
+    user_2_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_1_id) REFERENCES `User`(user_id),
+    FOREIGN KEY (user_2_id) REFERENCES `User`(user_id)
 );
+
+-- Table des messages
 CREATE TABLE Message (
-    message_id SERIAL PRIMARY KEY, 
-    conversation_id INT, 
-    sender_id INT, 
-    receiver_id INT, 
-    content TEXT NOT NULL, 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Date et heure d'envoi du message
-    FOREIGN KEY (conversation_id) REFERENCES Conversation(conversation_id), -- Clé étrangère référençant la table Conversation
-    FOREIGN KEY (sender_id) REFERENCES Usera(user_id), -- Clé étrangère référençant la table Usera
-    FOREIGN KEY (receiver_id) REFERENCES Usera(user_id) -- Clé étrangère référençant la table Usera
+    message_id INT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id INT,
+    sender_id INT,
+    receiver_id INT,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (conversation_id) REFERENCES Conversation(conversation_id),
+    FOREIGN KEY (sender_id) REFERENCES `User`(user_id),
+    FOREIGN KEY (receiver_id) REFERENCES `User`(user_id)
 );
 
-/* CREATE TYPE emotion_enum AS ENUM ('joie', 'colere', 'tristesse', 'surprise', 'degout', 'peur');-- création du type enum */
-
+-- Table des annotations émotionnelles
 CREATE TABLE Annotation (
-    annotation_id SERIAL PRIMARY KEY, 
-    message_id INT, 
+    annotation_id INT AUTO_INCREMENT PRIMARY KEY,
+    message_id INT,
     annotator_id INT,
     emotion ENUM('joie', 'colere', 'tristesse', 'surprise', 'degout', 'peur') NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Date et heure de création de l'annotation
-    FOREIGN KEY (message_id) REFERENCES Message(message_id), -- Clé étrangère référençant la table Message
-    FOREIGN KEY (annotator_id) REFERENCES Usera(user_id) -- Clé étrangère référençant la table Usera
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (message_id) REFERENCES Message(message_id),
+    FOREIGN KEY (annotator_id) REFERENCES `User`(user_id)
 );
+
