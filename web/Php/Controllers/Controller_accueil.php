@@ -21,7 +21,7 @@ class Controller_accueil extends Controller
      * Action par défaut du contrôleur
      */
     public function action_default(){
-        $this->render('accueil');
+        $this->accueil();
     }
 
     // Exemple dans AccueilController.php

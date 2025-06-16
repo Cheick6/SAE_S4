@@ -26,63 +26,7 @@
                         </div>
                     </a>
                 <?php endforeach; ?>
-            </div>
-            <div>
-                <h1 class="title">Commencez une discussion</h1>
-                <div class="search-container">
-                    <input type="text" id="search" placeholder="Rechercher un utilisateur">
-                    <button id="search-button">Rechercher</button>
-                </div>
-            </div>
-               <a href="index.php?controller=messagerie" class="user-item-link">
-                <div class="user-item">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="user-name">Pseudo</span>
-                 </div>
-             </a>
-            <a href="index.php?controller=messagerie" class="user-item-link">
-                <div class="user-item alternate">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="user-name">Pseudo</span>
-                </div>
-            </a>
-             <a href="index.php?controller=messagerie" class="user-item-link">
-                <div class="user-item">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="user-name">Pseudo</span>
-                 </div>
-             </a>
-            <a href="index.php?controller=messagerie" class="user-item-link">
-                <div class="user-item alternate">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="user-name">Pseudo</span>
-                </div>
-            </a>
-            <a href="index.php?controller=messagerie" class="user-item-link">
-                <div class="user-item">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="user-name">Pseudo</span>
-                 </div>
-             </a>
-            <a href="index.php?controller=messagerie" class="user-item-link">
-                <div class="user-item alternate">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="user-name">Pseudo</span>
-                </div>
-            </a>
-            <a href="index.php?controller=messagerie" class="user-item-link">
-                <div class="user-item">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="user-name">Pseudo</span>
-                 </div>
-             </a>
-            <a href="index.php?controller=messagerie" class="user-item-link">
-                <div class="user-item alternate">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="user-name">Pseudo</span>
-                </div>
-            </a>
-            <!-- Ajoutez d'autres éléments user-item ici -->
+            </div>  
         </main>
 
         <footer class="footer">
