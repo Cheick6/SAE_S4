@@ -12,7 +12,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $pdo = new PDO('mysql:host=localhost;dbname=tondb;charset=utf8', 'root', '');
 
         // Vérification des identifiants
-        $stmt = $pdo->prepare("SELECT user_id FROM Usera WHERE email = :email");
+        $stmt = $pdo->prepare("SELECT user_id FROM User WHERE email = :email");
         $stmt->execute(['email' => $email]);
         $user = $stmt->fetch();
         

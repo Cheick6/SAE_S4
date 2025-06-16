@@ -9,27 +9,32 @@
 </head>
 <body>
     <div class="container">
+        <p>Bienvenue sur Ping Me, <?php echo $_SESSION['username']; ?>!</p>
         <header class="header">
             <div class="menu-toggle">
                 <a href="index.php?controller=messagerie" class="user-item-link">
                 <a href="index.php?controller=parametres"> <i class="fas fa-cog"></i> </a>
             </div>
-            <h1 class="title">Commencez une discussion</h1>
-        </header>
+     </header>
         <main class="user-list">
-            <a href="index.php?controller=messagerie" class="user-item-link">
-                <div class="user-item">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="user-name">Pseudo</span>
-                 </div>
-             </a>
-            <a href="index.php?controller=messagerie" class="user-item-link">
-                <div class="user-item alternate">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="user-name">Pseudo</span>
+            <div class="user-list">
+                <?php foreach ($utilisateurs as $user): ?>
+                    <a href="index.php?controller=messagerie&id=<?= $user['user_id'] ?>" class="user-item-link">
+                        <div class="user-item">
+                            <i class="fas fa-user-circle"></i>
+                            <span class="user-name"><?= htmlspecialchars($user['username']) ?></span>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+            <div>
+                <h1 class="title">Commencez une discussion</h1>
+                <div class="search-container">
+                    <input type="text" id="search" placeholder="Rechercher un utilisateur">
+                    <button id="search-button">Rechercher</button>
                 </div>
-            </a>
-           <a href="index.php?controller=messagerie" class="user-item-link">
+            </div>
+               <a href="index.php?controller=messagerie" class="user-item-link">
                 <div class="user-item">
                     <i class="fas fa-user-circle"></i>
                     <span class="user-name">Pseudo</span>

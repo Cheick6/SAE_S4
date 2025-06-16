@@ -44,4 +44,3 @@ CREATE TABLE Annotation (
     FOREIGN KEY (message_id) REFERENCES Message(message_id),
     FOREIGN KEY (annotator_id) REFERENCES `User`(user_id)
 );
-

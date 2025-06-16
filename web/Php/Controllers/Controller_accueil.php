@@ -23,4 +23,12 @@ class Controller_accueil extends Controller
     public function action_default(){
         $this->render('accueil');
     }
+
+    // Exemple dans AccueilController.php
+    public function accueil() {
+        $utilisateurs = $this->model->getAllUsers();
+        $this->render('accueil', ['utilisateurs' => $utilisateurs]);
+    }
+    
+
 }

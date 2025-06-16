@@ -56,7 +56,7 @@ class Model {
         try{
         //Préparation de la requête
         $requete = $this->bd->prepare('
-        INSERT INTO Usera (username, nom, prenom, genre, email, password_hash)
+        INSERT INTO User (username, nom, prenom, genre, email, password_hash)
         VALUES (:pseudo, :nom, :prenom, :genre, :mail, :pswd)');
 
         //Remplacement des marqueurs de place par les valeurs
@@ -169,5 +169,10 @@ class Model {
                  error_log("Erreur lors de l'ajout du message : " . $e->getMessage());
                return false; // Retourne false en cas d'échec
            }
+         }
+         public function getAllUsers(){
+            $query = $this->bd->prepare('SELECT user_id,username FROM User');
+            $query->execute();
+            return $query->fetchAll(PDO::FETCH_ASSOC);
          }
 }
