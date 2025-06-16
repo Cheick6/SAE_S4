@@ -54,7 +54,7 @@ require 'view_debut.php';
         <!-- Email -->
         <div>
             <label for="email"><img src="../img/enveloppe.png" /> Adresse mail:</label>                                   
-            <input type="email" id="email" name="email" class="champs" placeholder="Entrez votre adresse email" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}" required>
+            <input type="email" id="email" name="email" class="champs" placeholder="Entrez votre adresse email" pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}" required>
             <small class="error-message">Veuillez entrer une adresse e-mail valide.</small>
         </div>
 

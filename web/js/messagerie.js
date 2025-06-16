@@ -1,6 +1,30 @@
+// Récupérer l'ID utilisateur depuis les cookies
+function getUserIdFromCookie() {
+    const name = "user_id=";
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const ca = decodedCookie.split(';');
+    for(let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return null;
+}
+
+// Obtenir l'ID utilisateur
+const userId = getUserIdFromCookie();
+if (!userId) {
+    alert("Vous devez être connecté pour utiliser la messagerie.");
+    window.location.href = "index.php?controller=connexion";
+}
+
 // Détecter automatiquement l'adresse du serveur
 const wsHost = window.location.hostname;
-const socket = new WebSocket(`ws://${wsHost}:8081`);
+const socket = new WebSocket(`ws://${wsHost}:8081?user_id=${userId}`);
 
 // Ajout du code de statut de la connexion
 const statusMessage = document.getElementById('status-message');
@@ -11,6 +35,12 @@ socket.onopen = function(event) {
         statusMessage.textContent = 'Connecté';
         statusMessage.style.color = 'green';
     }
+    
+    // Envoyer une notification de connexion au serveur
+    socket.send(JSON.stringify({
+        type: 'user_connected',
+        user_id: userId
+    }));
 };
 
 socket.onerror = function (error) {
@@ -30,6 +60,7 @@ socket.onclose = function(event) {
 };
 
 let annotationEnAttente = false;
+let messageCounter = 0;
 
 function scrollToBottom() {
     const messageDisplayAreaUser = document.getElementById('messageDisplayAreaUser');
@@ -83,11 +114,18 @@ function envoyerMessage() {
         return;
     }
 
-    // Envoyer le message
+    // Créer un ID unique pour le message
+    messageCounter++;
+    const messageId = `message-${Date.now()}-${messageCounter}`;
+
+    // Envoyer le message avec toutes les informations nécessaires
     const messageData = {
+        type: 'sent',
         message: messageText,
         annotations: emojis,
-        type: 'sent'
+        user_id: userId,
+        message_id: messageId,
+        timestamp: new Date().toISOString()
     };
 
     socket.send(JSON.stringify(messageData));
@@ -127,14 +165,19 @@ document.getElementById('messageInput').addEventListener('keypress', function (e
 // Gestion des messages reçus
 socket.onmessage = function (event) {
     try {
-        const messageData = JSON.parse(event.data);
-
-        if (messageData.type === 'sent') {
-            messageData.type = 'received';
+        const data = JSON.parse(event.data);
+        
+        if (data.error) {
+            alert('Erreur: ' + data.error);
+            return;
         }
 
-        afficherMessage(messageData, false);
-        annotationEnAttente = true;
+        if (data.type === 'received') {
+            afficherMessage(data, false);
+            annotationEnAttente = true;
+        } else {
+            console.log('Message reçu:', data);
+        }
     } catch (error) {
         console.error("Erreur lors du parsing du message:", error);
     }
@@ -143,7 +186,10 @@ socket.onmessage = function (event) {
 function afficherMessage(messageData, showAnnotations) {
     const messageContainer = document.createElement('div');
     messageContainer.classList.add('message-container', messageData.type);
-    messageContainer.id = 'message-' + Date.now(); // ID unique
+    
+    // Utiliser l'ID du message ou créer un ID unique
+    const messageId = messageData.message_id || `message-${Date.now()}`;
+    messageContainer.id = messageId;
 
     const messageElement = document.createElement('div');
     messageElement.classList.add('message', messageData.type);
@@ -221,7 +267,10 @@ function annoterMessageRecu(messageContainer) {
         
         // Notifier le serveur que l'annotation est terminée
         if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type: 'annotation-complete' }));
+            socket.send(JSON.stringify({ 
+                type: 'annotation-complete',
+                user_id: userId
+            }));
         }
     };
 
@@ -253,11 +302,13 @@ function ajouterAnnotations(messageContainer, emojiSelect) {
         const messageElement = messageContainer.querySelector('.message');
         messageContainer.insertBefore(annotationContainer, messageElement.nextSibling);
 
-        // Envoyer l'annotation au serveur
+        // Envoyer l'annotation au serveur avec les informations complètes
         const annotationData = {
+            type: 'annotation',
             messageId: messageContainer.id,
             annotations: selectedEmoji,
-            type: 'annotation'
+            user_id: userId,
+            timestamp: new Date().toISOString()
         };
         
         if (socket.readyState === WebSocket.OPEN) {

@@ -54,11 +54,10 @@ class Model {
     public function userExists($email)
     {
         try {
-            // Préparation de la requête pour récupérer l'utilisateur et le mot de passe
-            $query = $this->bd->prepare('SELECT user_id, username, password_hash FROM Usera WHERE email = :mail');
+            // Utiliser le bon nom de table : User
+            $query = $this->bd->prepare('SELECT user_id, username, password_hash FROM `User` WHERE email = :mail');
             $query->execute([':mail' => $email]);
             
-            // Récupérer l'utilisateur
             return $query->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log("Erreur userExists: " . $e->getMessage());
@@ -74,27 +73,37 @@ class Model {
     public function addUser($infos)
     {
         try {
-            //Préparation de la requête
+            // DEBUG: Afficher les données reçues
+            error_log("addUser - Données reçues: " . print_r($infos, true));
+            
+            // Utiliser le bon nom de table : User
             $requete = $this->bd->prepare('
-            INSERT INTO Usera (username, nom, prenom, genre, email, password_hash)
-            VALUES (:pseudo, :nom, :prenom, :genre, :mail, :pswd)');
+            INSERT INTO `User` (username, genre, email, password_hash, is_online, created_at)
+            VALUES (:pseudo, :genre, :mail, :pswd, FALSE, NOW())');
 
-            //Remplacement des marqueurs de place par les valeurs
-            $success = $requete->execute([
+            $params = [
                 ':pseudo' => $infos['pseudo'],
-                ':nom' => $infos['nom'],
-                ':prenom' => $infos['prenom'],
                 ':genre' => $infos['genre'],
                 ':mail' => $infos['email'],
                 ':pswd' => $infos['password_hash'],
-            ]);
+            ];
+            
+            error_log("addUser - Paramètres SQL: " . print_r($params, true));
 
-            //Retourne true si l'insertion a réussi, sinon false
-            return $success;
+            $success = $requete->execute($params);
+
+            if ($success) {
+                $newUserId = $this->bd->lastInsertId();
+                error_log("addUser - Utilisateur ajouté avec succès, ID: $newUserId");
+                return true;
+            } else {
+                error_log("addUser - Échec de l'exécution de la requête");
+                return false;
+            }
+            
         } catch (PDOException $e) {
-            // Gestion des erreurs
             error_log("Erreur lors de l'ajout de l'utilisateur : " . $e->getMessage());
-            return false; // Retourne false en cas d'échec
+            return false;
         }
     }
 
@@ -107,15 +116,15 @@ class Model {
     public function checkUser($email, $password)
     {
         try {
-            $query = $this->bd->prepare('SELECT * FROM Usera WHERE email = :mail');
+            $query = $this->bd->prepare('SELECT * FROM `User` WHERE email = :mail');
             $query->execute([':mail' => $email]);
 
-            $user = $query->fetch(PDO::FETCH_ASSOC); // Retourne l'utilisateur ou false
+            $user = $query->fetch(PDO::FETCH_ASSOC);
             
             if ($user && password_verify($password, $user['password_hash'])) {
-                return $user; // Si l'utilisateur existe et que le mot de passe correspond, on retourne l'utilisateur
+                return $user;
             } else {
-                return false; // Si l'utilisateur n'existe pas ou que le mot de passe ne correspond pas, on retourne false
+                return false;
             }
         } catch (PDOException $e) {
             error_log("Erreur checkUser: " . $e->getMessage());
@@ -133,7 +142,7 @@ class Model {
         try {
             if (isset($_COOKIE['user_id'])) {
                 $id = $_COOKIE['user_id'];
-                $query = $this->bd->prepare('UPDATE Usera SET username = :pseudo WHERE user_id = :id');
+                $query = $this->bd->prepare('UPDATE `User` SET username = :pseudo WHERE user_id = :id');
                 $query->execute([
                     ':id' => $id,
                     ':pseudo' => $pseudo,
@@ -156,23 +165,18 @@ class Model {
     public function checkMdp($email, $mdp)
     {
         try {
-            $query = $this->bd->prepare('SELECT password_hash FROM Usera WHERE email = :email');
+            $query = $this->bd->prepare('SELECT password_hash FROM `User` WHERE email = :email');
             $query->execute([':email' => $email]);
 
-            //Récupérer le mot de passe haché
             $user = $query->fetch(PDO::FETCH_ASSOC);
 
             if ($user) {
-                // Comparaison du mot de passe entré avec le haché
                 if (password_verify($mdp, $user['password_hash'])) {
-                    // Le mot de passe est correct
                     return true;
                 } else {
-                    // Le mot de passe est incorrect
                     return false;
                 }
             } else {
-                // L'utilisateur n'a pas été trouvé (email incorrect)
                 return false;
             }
         } catch (PDOException $e) {
@@ -190,14 +194,12 @@ class Model {
     public function changeMdp($actuel, $newmdp)
     {
         try {
-            // Il faut d'abord récupérer l'utilisateur par son ID (cookie)
             if (isset($_COOKIE['user_id'])) {
                 $userId = $_COOKIE['user_id'];
                 
-                // Hacher le nouveau mot de passe
                 $newPasswordHash = password_hash($newmdp, PASSWORD_DEFAULT);
                 
-                $query = $this->bd->prepare('UPDATE Usera SET password_hash = :newmdp WHERE user_id = :user_id');
+                $query = $this->bd->prepare('UPDATE `User` SET password_hash = :newmdp WHERE user_id = :user_id');
                 $query->execute([
                     ':newmdp' => $newPasswordHash,
                     ':user_id' => $userId,
@@ -220,7 +222,7 @@ class Model {
         try {
             if (isset($_COOKIE['user_id'])) {
                 $userId = $_COOKIE['user_id'];
-                $stmt = $this->bd->prepare("UPDATE Usera SET last_online_at = NOW(), is_online = FALSE WHERE user_id = :user_id");
+                $stmt = $this->bd->prepare("UPDATE `User` SET is_online = FALSE WHERE user_id = :user_id");
                 $stmt->execute(['user_id' => $userId]);
                 return $stmt->rowCount() > 0;
             } else {
@@ -235,30 +237,74 @@ class Model {
     /**
      * Ajoute un message dans la base de données
      * @param array $messageData Données du message
-     * @return bool True si succès, false sinon
+     * @return int|false ID du message inséré ou false en cas d'erreur
      */
     public function addMessage($messageData)
     {
         try {
-            //Préparation de la requête
+            $conversationId = $this->getOrCreateConversation($messageData['sender_id'], $messageData['receiver_id']);
+            
             $requete = $this->bd->prepare('
-            INSERT INTO Message (conversation_id, sender_id, receiver_id, content)
-            VALUES (:conversation_id, :sender_id, :receiver_id, :content)');
+            INSERT INTO Message (conversation_id, sender_id, receiver_id, content, created_at)
+            VALUES (:conversation_id, :sender_id, :receiver_id, :content, NOW())');
 
-            //Remplacement des marqueurs de place par les valeurs
             $success = $requete->execute([
-                ':conversation_id' => $messageData['conversation_id'],
+                ':conversation_id' => $conversationId,
                 ':sender_id' => $messageData['sender_id'],
                 ':receiver_id' => $messageData['receiver_id'],
                 ':content' => $messageData['message']
             ]);
             
-            //Retourne true si l'insertion a réussi, sinon false
-            return $success;
+            if ($success) {
+                return $this->bd->lastInsertId();
+            }
+            
+            return false;
         } catch (PDOException $e) {
-            // Gestion des erreurs
             error_log("Erreur lors de l'ajout du message : " . $e->getMessage());
-            return false; // Retourne false en cas d'échec
+            return false;
+        }
+    }
+
+    /**
+     * Récupère ou crée une conversation entre deux utilisateurs
+     * @param int $user1Id ID du premier utilisateur
+     * @param int $user2Id ID du second utilisateur
+     * @return int ID de la conversation
+     */
+    private function getOrCreateConversation($user1Id, $user2Id)
+    {
+        try {
+            $query = $this->bd->prepare('
+                SELECT conversation_id FROM Conversation 
+                WHERE (user_1_id = :user1 AND user_2_id = :user2) 
+                   OR (user_1_id = :user2 AND user_2_id = :user1)
+            ');
+            $query->execute([
+                ':user1' => $user1Id,
+                ':user2' => $user2Id
+            ]);
+            
+            $conversation = $query->fetch(PDO::FETCH_ASSOC);
+            
+            if ($conversation) {
+                return $conversation['conversation_id'];
+            }
+            
+            $insertQuery = $this->bd->prepare('
+                INSERT INTO Conversation (user_1_id, user_2_id, created_at)
+                VALUES (:user1, :user2, NOW())
+            ');
+            $insertQuery->execute([
+                ':user1' => $user1Id,
+                ':user2' => $user2Id
+            ]);
+            
+            return $this->bd->lastInsertId();
+            
+        } catch (PDOException $e) {
+            error_log("Erreur getOrCreateConversation: " . $e->getMessage());
+            return 1;
         }
     }
 
@@ -271,8 +317,8 @@ class Model {
     {
         try {
             $requete = $this->bd->prepare('
-            INSERT INTO Annotation (message_id, annotator_id, emotion)
-            VALUES (:message_id, :annotator_id, :emotion)');
+            INSERT INTO Annotation (message_id, annotator_id, emotion, created_at)
+            VALUES (:message_id, :annotator_id, :emotion, NOW())');
 
             $success = $requete->execute([
                 ':message_id' => $annotationData['message_id'],
@@ -296,63 +342,14 @@ class Model {
     public function updateOnlineStatus($userId, $isOnline)
     {
         try {
-            $stmt = $this->bd->prepare("UPDATE Usera SET is_online = :is_online WHERE user_id = :user_id");
+            $stmt = $this->bd->prepare("UPDATE `User` SET is_online = :is_online WHERE user_id = :user_id");
             $stmt->execute([
                 'is_online' => $isOnline ? 1 : 0,
                 'user_id' => $userId
             ]);
-            return $stmt->rowCount() > 0;
+            return $stmt->rowCount() >= 0;
         } catch (PDOException $e) {
             error_log("Erreur updateOnlineStatus: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Récupère les messages d'une conversation
-     * @param int $conversationId ID de la conversation
-     * @return array|false Messages de la conversation ou false
-     */
-    public function getMessages($conversationId)
-    {
-        try {
-            $query = $this->bd->prepare('
-                SELECT m.*, u.username as sender_name 
-                FROM Message m 
-                JOIN Usera u ON m.sender_id = u.user_id 
-                WHERE m.conversation_id = :conversation_id 
-                ORDER BY m.created_at ASC
-            ');
-            $query->execute([':conversation_id' => $conversationId]);
-            return $query->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log("Erreur getMessages: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Récupère toutes les conversations d'un utilisateur
-     * @param int $userId ID de l'utilisateur
-     * @return array|false Conversations ou false
-     */
-    public function getUserConversations($userId)
-    {
-        try {
-            $query = $this->bd->prepare('
-                SELECT c.*, 
-                       u1.username as user1_name, 
-                       u2.username as user2_name
-                FROM Conversation c
-                JOIN Usera u1 ON c.user_1_id = u1.user_id
-                JOIN Usera u2 ON c.user_2_id = u2.user_id
-                WHERE c.user_1_id = :user_id OR c.user_2_id = :user_id
-                ORDER BY c.created_at DESC
-            ');
-            $query->execute([':user_id' => $userId]);
-            return $query->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log("Erreur getUserConversations: " . $e->getMessage());
             return false;
         }
     }

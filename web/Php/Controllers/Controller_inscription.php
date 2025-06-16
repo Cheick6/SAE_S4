@@ -30,20 +30,27 @@ class Controller_inscription extends Controller
     {
         $message = "";
 
+        // DEBUG: Afficher les données POST reçues
+        error_log("Données POST reçues: " . print_r($_POST, true));
+
         // Vérification si le formulaire a été soumis
-        if (isset($_POST['action'])&& $_POST['action'] === 'inscription') {
-        // Récupération des champs avec protection contre les injections
-            $prenom = htmlspecialchars($_POST['prenom']);
-            $nom = htmlspecialchars($_POST['nom']);
-            $pseudo = htmlspecialchars($_POST['pseudo']);
-            $genre = htmlspecialchars($_POST['genre']);
-            $email = htmlspecialchars($_POST['email']);
-            $password = htmlspecialchars($_POST['password']);
-            $password_hash = password_hash($password, PASSWORD_DEFAULT); // Hachage du mot de passe
+        if (isset($_POST['action']) && $_POST['action'] === 'inscription') {
+            
+            // Récupération des champs avec protection contre les injections
+            $prenom = isset($_POST['prenom']) ? htmlspecialchars(trim($_POST['prenom'])) : '';
+            $nom = isset($_POST['nom']) ? htmlspecialchars(trim($_POST['nom'])) : '';
+            $pseudo = isset($_POST['pseudo']) ? htmlspecialchars(trim($_POST['pseudo'])) : '';
+            $genre = isset($_POST['genre']) ? htmlspecialchars($_POST['genre']) : '';
+            $email = isset($_POST['email']) ? htmlspecialchars(trim($_POST['email'])) : '';
+            $password = isset($_POST['password']) ? htmlspecialchars($_POST['password']) : '';
+
+            // DEBUG: Afficher les valeurs récupérées
+            error_log("Valeurs récupérées - Prénom: $prenom, Nom: $nom, Pseudo: $pseudo, Genre: $genre, Email: $email");
 
             // Vérification si la case "Politique de confidentialité" a été cochée
             if (!isset($_POST['politique']) || $_POST['politique'] !== 'inscription') {
                 $message = "Vous devez accepter la politique de confidentialité.";
+                error_log("Erreur: Politique non acceptée");
                 $this->render('inscription', ['message' => $message]);
                 return;
             }
@@ -51,6 +58,7 @@ class Controller_inscription extends Controller
             // Vérification des champs
             if (empty($prenom) || empty($nom) || empty($pseudo) || empty($genre) || empty($email) || empty($password)) {
                 $message = "Tous les champs doivent être remplis.";
+                error_log("Erreur: Champs manquants");
                 $this->render('inscription', ['message' => $message]);
                 return;
             }
@@ -58,16 +66,22 @@ class Controller_inscription extends Controller
             // Vérification si l'email est valide
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $message = "L'adresse email n'est pas valide.";
+                error_log("Erreur: Email invalide - $email");
                 $this->render('inscription', ['message' => $message]);
                 return;
             }
 
             // Vérification si l'email existe déjà dans la base de données
-            if ($this->model->userExists($email)) {
+            $existingUser = $this->model->userExists($email);
+            if ($existingUser) {
                 $message = "Un compte existe déjà avec cet email.";
+                error_log("Erreur: Email déjà existant - $email");
                 $this->render('inscription', ['message' => $message]);
                 return;
             }
+
+            // Hachage du mot de passe
+            $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
             // Insertion de l'utilisateur dans la base de données
             $userData = [
@@ -79,21 +93,31 @@ class Controller_inscription extends Controller
                 'password_hash' => $password_hash
             ];
 
+            // DEBUG: Afficher les données avant insertion
+            error_log("Données à insérer: " . print_r($userData, true));
+
             // Ajout de l'utilisateur dans la base de données
             $result = $this->model->addUser($userData);
 
             if ($result) {
+                error_log("Inscription réussie pour: $email");
                 // Redirige vers la page de connexion après l'inscription
-                header("Location: index.php?controller=connexion");
+                $message = "Inscription réussie ! Vous pouvez maintenant vous connecter.";
+                header("Location: index.php?controller=connexion&message=" . urlencode($message));
                 exit;
             } else {
-                $message = "Une erreur est survenue, veuillez réessayer.";
+                $message = "Une erreur est survenue lors de l'inscription, veuillez réessayer.";
+                error_log("Erreur: Échec de l'insertion en base de données");
                 $this->render('inscription', ['message' => $message]);
                 return;
             }
+        } else {
+            // Si le formulaire n'est pas soumis correctement
+            error_log("Erreur: Formulaire non soumis correctement");
+            $message = "Erreur de soumission du formulaire.";
         }
-        // Si le formulaire n'est pas soumis, afficher la page d'inscription
-        $message="Le formulaire n'a pas été soumis. Veuillez réessayer";
+        
+        // Afficher la page d'inscription avec le message
         $this->render('inscription', ['message' => $message]);
     }
 }
