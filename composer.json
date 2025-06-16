@@ -1,5 +1,5 @@
 {
-    "name": "votre-nom/sae-s4",
+    "name": "projet/sae-s4",
     "description": "Application de messagerie avec WebSocket",
     "type": "project",
     "require": {
