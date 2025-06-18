@@ -37,15 +37,13 @@ class Controller_inscription extends Controller
         if (isset($_POST['action']) && $_POST['action'] === 'inscription') {
             
             // Récupération des champs avec protection contre les injections
-            $prenom = isset($_POST['prenom']) ? htmlspecialchars(trim($_POST['prenom'])) : '';
-            $nom = isset($_POST['nom']) ? htmlspecialchars(trim($_POST['nom'])) : '';
             $pseudo = isset($_POST['pseudo']) ? htmlspecialchars(trim($_POST['pseudo'])) : '';
             $genre = isset($_POST['genre']) ? htmlspecialchars($_POST['genre']) : '';
             $email = isset($_POST['email']) ? htmlspecialchars(trim($_POST['email'])) : '';
             $password = isset($_POST['password']) ? htmlspecialchars($_POST['password']) : '';
 
             // DEBUG: Afficher les valeurs récupérées
-            error_log("Valeurs récupérées - Prénom: $prenom, Nom: $nom, Pseudo: $pseudo, Genre: $genre, Email: $email");
+            error_log("Valeurs récupérées - Pseudo: $pseudo, Genre: $genre, Email: $email");
 
             // Vérification si la case "Politique de confidentialité" a été cochée
             if (!isset($_POST['politique']) || $_POST['politique'] !== 'inscription') {
