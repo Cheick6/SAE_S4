@@ -119,9 +119,9 @@ class ChatServer implements MessageComponentInterface {
                     
                     $annotationSaved = $this->model->addAnnotation($senderAnnotation);
                     if ($annotationSaved) {
-                        echo "✅ Annotation de l'expéditeur sauvegardée: {$emotion} pour le message {$messageId}\n";
+                        echo "Annotation de l'expéditeur sauvegardée: {$emotion} pour le message {$messageId}\n";
                     } else {
-                        echo "❌ Erreur lors de la sauvegarde de l'annotation de l'expéditeur\n";
+                        echo "Erreur lors de la sauvegarde de l'annotation de l'expéditeur\n";
                     }
                 }
             }
@@ -208,7 +208,7 @@ class ChatServer implements MessageComponentInterface {
         $saved = $this->model->addAnnotation($annotationToSave);
         
         if ($saved) {
-            echo "✅ Annotation sauvegardée avec succès: {$emotion} pour le message {$realMessageId}\n";
+            echo "Annotation sauvegardée avec succès: {$emotion} pour le message {$realMessageId}\n";
             
             // Diffuser l'annotation aux autres clients
             $this->broadcastToOthers($from, json_encode($messageData));
