@@ -19,20 +19,6 @@ require 'view_debut.php';
     <div id="formulaire">
 
         <form method="POST" action="index.php?controller=inscription&action=inscription">
-           
-        <!-- Prénom -->
-        <div>
-                <label for="prenom"> Prénom: </label>
-                <input type="text" id="prenom" name="prenom" class="champs" placeholder="Entrez votre prénom" required>
-                <small class="error-message">Veuillez entrer un prénom valide (au moins 2 lettres).</small>
-        </div>
-
-        <!-- Nom -->
-        <div>
-            <label for="nom"> Nom: </label>
-            <input type="text" id="nom" name="nom" class="champs" placeholder="Entrez votre nom" required>
-            <small class="error-message">Veuillez entrer un nom valide (au moins 2 lettres).</small>
-        </div>
 
         <!-- Pseudo -->
         <div>

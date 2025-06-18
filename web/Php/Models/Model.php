@@ -1,5 +1,5 @@
 <?php
-
+require_once 'Utils/parametre.php';// contient les données de connexion à la base de données 
 class Model {
     /**
      * Attribut contenant l'instance PDO
@@ -315,6 +315,7 @@ class Model {
         } catch (PDOException $e) {
             error_log("Erreur getOrCreateConversation: " . $e->getMessage());
             return 1;
+
         }
     }
 
