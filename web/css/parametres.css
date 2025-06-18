@@ -21,9 +21,9 @@ a {
     box-sizing: border-box;
     background-color: #f0f0f0;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    position: sticky; /* Pour que le header reste en haut */
+    position: sticky;
     top: 0;
-    z-index: 10; /* Pour s'assurer que le header reste au-dessus du contenu */
+    z-index: 10;
 }
 
 #retour {

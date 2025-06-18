@@ -169,9 +169,9 @@ class Model {
                return false; // Retourne false en cas d'échec
            }
          }
-         public function getAllUsers(){
-            $query = $this->bd->prepare('SELECT user_id, username FROM User');
-            $query->execute();
+         public function getAllUsers($myId){
+            $query = $this->bd->prepare('SELECT user_id, username FROM User WHERE user_id != :myid');
+            $query->execute(['myid' => $myId]);
             return $query->fetchAll(PDO::FETCH_ASSOC);
-        }
+}        
 }

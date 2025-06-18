@@ -42,14 +42,18 @@ class ChatServer implements Ratchet\MessageComponentInterface {
                , $from->resourceId,  $messageData['userId'] );
            }
          else if ($messageData && isset($messageData['type']) && $messageData['type'] === 'annotation') {
-            // Traitement des annotations
-              $model->addAnnotation($messageData);
-           foreach ($this->clients as $client) {
-               if ($from !== $client) {
-                     $client->send($msg);
-                }
-             }
-          }
+    // Traitement des annotations avec gestion d'erreur
+    try {
+        $model->addAnnotation($messageData);
+        foreach ($this->clients as $client) {
+            if ($from !== $client) {
+                $client->send($msg);
+            }
+        }
+    } catch (\Throwable $e) {
+        echo "Erreur annotation : " . $e->getMessage() . "\n";
+    }
+}
        else {
            foreach ($this->clients as $client) {
                 if ($from !== $client) {

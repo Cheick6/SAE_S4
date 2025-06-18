@@ -1,63 +1,63 @@
 // Établir la connexion WebSocket avec le serveur
 const socket = new WebSocket('ws://172.20.10.2:8080');
 
-// Ajout du code de statut de la connexion
+// Variables d'état
+let isSending = false;
+let annotationEnAttente = false;
+let annotatedMessages = new Set(); // Pour garder trace des messages déjà annotés
+
+console.log("Annotation en attente");
+
+
+// Gestion de la connexion WebSocket
 const statusMessage = document.getElementById('status-message');
 
 socket.onopen = function(event) {
- console.log("Connexion WebSocket établie avec le serveur !");
-  if (statusMessage){
-      statusMessage.textContent = 'Connecté';
-      statusMessage.style.color = 'green';
-  }
+    console.log("Connexion WebSocket établie avec le serveur !");
+    if (statusMessage){
+        statusMessage.textContent = 'Connecté';
+        statusMessage.style.color = 'green';
+    }
 };
 
-socket.onerror = function (error) {
-  console.error("Erreur WebSocket :", error);
-  if (statusMessage){
-       statusMessage.textContent = 'Erreur de connexion';
-       statusMessage.style.color = 'red';
-  }
+socket.onerror = function(error) {
+    console.error("Erreur WebSocket :", error);
+    if (statusMessage){
+        statusMessage.textContent = 'Erreur de connexion';
+        statusMessage.style.color = 'red';
+    }
 };
 
 socket.onclose = function(event) {
-  console.log('Connexion WebSocket fermée');
+    console.log('Connexion WebSocket fermée');
     if (statusMessage){
-         statusMessage.textContent = 'Déconnecté';
-         statusMessage.style.color = 'orange';
-  }
+        statusMessage.textContent = 'Déconnecté';
+        statusMessage.style.color = 'orange';
+    }
 };
 
-let annotationEnAttente = false;
-
+// Fonctions utilitaires
 function scrollToBottom() {
-    var messageDisplayAreaUser = document.getElementById('messageDisplayAreaUser');
+    const messageDisplayAreaUser = document.getElementById('messageDisplayAreaUser');
     messageDisplayAreaUser.scrollTop = messageDisplayAreaUser.scrollHeight;
 }
 
-function ajouterEmoji(emoji) {
-    var emojiList = document.getElementById('emojiList');
-    var emojiSpan = document.createElement('span');
-    emojiSpan.textContent = emoji;
-    emojiSpan.style.cursor = 'pointer';
-    emojiSpan.onclick = function () {
-        emojiList.removeChild(emojiSpan);
-    };
-    emojiList.appendChild(emojiSpan);
-}
-
+// Envoi de message
 function envoyerMessage() {
-    var messageInput = document.getElementById('messageInput');
-    var emojiList = document.getElementById('emojiList');
-    var messageText = messageInput.value.trim();
-    var emojis = '';
+    if (isSending) return;
+    
+    const messageInput = document.getElementById('messageInput');
+    const emojiList = document.getElementById('emojiList');
+    const messageText = messageInput.value.trim();
+    let emojis = '';
 
-    var emojiSpans = emojiList.getElementsByTagName('span');
-    for (var i = 0; i < emojiSpans.length; i++) {
+    const emojiSpans = emojiList.getElementsByTagName('span');
+    for (let i = 0; i < emojiSpans.length; i++) {
         emojis += emojiSpans[i].textContent;
     }
 
     if (annotationEnAttente) {
+        alert("Veuillez terminer l'annotation en cours avant d'envoyer un nouveau message.");
         return;
     }
 
@@ -65,41 +65,49 @@ function envoyerMessage() {
         alert("Veuillez sélectionner un emoji avant d'envoyer votre message.");
         return;
     }
+
     if (emojis !== "" && messageText !== "") {
-        var messageData = {
+        isSending = true;
+        const sendButton = document.getElementById('sendButton');
+        if (sendButton) sendButton.disabled = true;
+        
+        const messageData = {
             message: messageText,
             annotations: emojis,
             type: 'sent'
         };
 
         socket.send(JSON.stringify(messageData));
-
         afficherMessage(messageData, true);
 
         messageInput.value = '';
         emojiList.innerHTML = '';
+        // NE PAS réactiver ici, attendre la réception d'un message
     }
 }
 
-document.getElementById('emojiSelect').addEventListener('change', function (event) {
-    var selectedEmoji = this.value;
-    var emojiList = document.getElementById('emojiList');
+// Gestion des emojis
+document.getElementById('emojiSelect').addEventListener('change', function(event) {
+    const selectedEmoji = this.value;
+    const emojiList = document.getElementById('emojiList');
     emojiList.innerHTML = '';
     if (selectedEmoji) {
-        var emojiSpan = document.createElement('span');
+        const emojiSpan = document.createElement('span');
         emojiSpan.textContent = selectedEmoji;
         emojiList.appendChild(emojiSpan);
     }
 });
 
-document.getElementById('messageInput').addEventListener('keypress', function (event) {
-    if (event.key === 'Enter') {
+// Envoi avec la touche Entrée
+document.getElementById('messageInput').addEventListener('keypress', function(event) {
+    if (event.key === 'Enter' && !isSending) {
         envoyerMessage();
     }
 });
 
-socket.onmessage = function (event) {
-    var messageData = JSON.parse(event.data);
+// Réception des messages
+socket.onmessage = function(event) {
+    const messageData = JSON.parse(event.data);
 
     if (messageData.type === 'sent') {
         messageData.type = 'received';
@@ -107,105 +115,111 @@ socket.onmessage = function (event) {
 
     afficherMessage(messageData, false);
     annotationEnAttente = true;
+
+    // Débloquer l'envoi si on reçoit un message de l'autre utilisateur
+    if (messageData.type === 'received') {
+        isSending = false;
+        const sendButton = document.getElementById('sendButton');
+        if (sendButton) sendButton.disabled = false;
+    }
 };
 
+// Affichage des messages
 function afficherMessage(messageData, showAnnotations) {
-    var messageContainer = document.createElement('div');
+    const messageContainer = document.createElement('div');
     messageContainer.classList.add('message-container', messageData.type);
+    
+    // Ajout d'un ID unique pour le message
+    const messageId = 'msg-' + Date.now();
+    messageContainer.id = messageId;
 
-    var messageElement = document.createElement('div');
+    const messageElement = document.createElement('div');
     messageElement.classList.add('message', messageData.type);
     messageElement.textContent = messageData.message;
     messageContainer.appendChild(messageElement);
 
     if (showAnnotations && messageData.annotations) {
-        var annotationContainer = document.createElement('div');
+        const annotationContainer = document.createElement('div');
         annotationContainer.classList.add('emoji-annotation');
-        for (var i = 0; i < messageData.annotations.length; i++) {
-            var emojiSpan = document.createElement('span');
+        for (let i = 0; i < messageData.annotations.length; i++) {
+            const emojiSpan = document.createElement('span');
             emojiSpan.textContent = messageData.annotations[i];
             annotationContainer.appendChild(emojiSpan);
         }
         messageContainer.appendChild(annotationContainer);
     }
 
-    // Afficher le bouton 'Annoter' uniquement pour les messages reçus
-    if (messageData.type === 'received' && !messageContainer.classList.contains('annotated')) {
-        var annoterButton = document.createElement('button');
+    // Afficher le bouton 'Annoter' uniquement pour les messages reçus non annotés
+    if (messageData.type === 'received' && !annotatedMessages.has(messageId)) {
+        const annoterButton = document.createElement('button');
         annoterButton.classList.add('annoter-button');
         annoterButton.textContent = 'Annoter';
-        annoterButton.onclick = function () {
-            annoterMessageRecu(messageContainer);
+        annoterButton.onclick = function() {
+            if (!annotatedMessages.has(messageId)) {
+                annotatedMessages.add(messageId);
+                annoterButton.disabled = true;
+                annoterButton.style.opacity = '0.6';
+                annoterButton.style.cursor = 'not-allowed';
+                annoterMessageRecu(messageContainer);
+            }
         };
         messageContainer.appendChild(annoterButton);
     }
 
-    var messageDisplayAreaUser = document.getElementById('messageDisplayAreaUser');
+    const messageDisplayAreaUser = document.getElementById('messageDisplayAreaUser');
     messageDisplayAreaUser.appendChild(messageContainer);
     scrollToBottom();
 }
 
+// Annotation des messages reçus
 function annoterMessageRecu(messageContainer) {
-    if (messageContainer.classList.contains('annotated')) {
-        return;
-    }
-
-    var emojiSelect = document.createElement('select');
+    const emojiSelect = document.createElement('select');
     emojiSelect.id = 'emojiSelectAnnotation';
-    var emojis = ['😊','😡​', '😞', '😖', '😵‍⃫', '😰'];
-    emojis.forEach(function (emoji) {
-        var option = document.createElement('option');
+    const emojis = ['😊','😡', '😞', '😖', '😵‍💫', '😰'];
+    
+    emojis.forEach(function(emoji) {
+        const option = document.createElement('option');
         option.value = emoji;
         option.text = emoji;
         emojiSelect.appendChild(option);
     });
 
-    var validerButton = document.createElement('button');
+    const validerButton = document.createElement('button');
     validerButton.textContent = 'Valider';
+    validerButton.classList.add('valider-button');
 
-    var finAnnotationButton = document.createElement('button');
-    finAnnotationButton.textContent = 'Fin annotation';
-    finAnnotationButton.disabled = true;
-
-    finAnnotationButton.onclick = function () {
-        messageContainer.classList.add('annotated');
-        messageContainer.removeChild(finAnnotationButton);
+    validerButton.onclick = function() {
+        ajouterAnnotations(messageContainer, emojiSelect);
+        // Supprimer l'interface d'annotation après validation
         messageContainer.removeChild(emojiSelect);
         messageContainer.removeChild(validerButton);
-        var btn = messageContainer.querySelector('.annoter-button');
-        if (btn) messageContainer.removeChild(btn);
         annotationEnAttente = false;
-        socket.send(JSON.stringify({ type: 'annotation-complete' }));
-    };
-
-    validerButton.onclick = function () {
-        ajouterAnnotations(messageContainer, emojiSelect);
-        finAnnotationButton.disabled = false;
     };
 
     messageContainer.appendChild(emojiSelect);
     messageContainer.appendChild(validerButton);
-    messageContainer.appendChild(finAnnotationButton);
 }
 
+
+// Ajout des annotations
 function ajouterAnnotations(messageContainer, emojiSelect) {
-    var selectedEmojis = Array.from(emojiSelect.selectedOptions)
+    const selectedEmojis = Array.from(emojiSelect.selectedOptions)
         .map(option => option.value)
         .join('');
 
-    var annotationContainer = document.createElement('div');
+    const annotationContainer = document.createElement('div');
     annotationContainer.classList.add('emoji-annotation');
 
-    for (var i = 0; i < selectedEmojis.length; i++) {
-        var emojiSpan = document.createElement('span');
+    for (let i = 0; i < selectedEmojis.length; i++) {
+        const emojiSpan = document.createElement('span');
         emojiSpan.textContent = selectedEmojis[i];
         annotationContainer.appendChild(emojiSpan);
     }
 
-    var messageElement = messageContainer.querySelector('.message');
+    const messageElement = messageContainer.querySelector('.message');
     messageContainer.insertBefore(annotationContainer, messageElement.nextSibling);
 
-    var annotationData = {
+    const annotationData = {
         messageId: messageContainer.id,
         annotations: selectedEmojis,
         type: 'annotation'

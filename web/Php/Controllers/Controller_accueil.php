@@ -26,7 +26,8 @@ class Controller_accueil extends Controller
 
     // Exemple dans AccueilController.php
     public function accueil() {
-        $utilisateurs = $this->model->getAllUsers();
+        $myId = $_SESSION['user_id'];
+        $utilisateurs = $this->model->getAllUsers($myId);
         $this->render('accueil', ['utilisateurs' => $utilisateurs]);
     }
     

@@ -12,7 +12,6 @@
         <p>Bienvenue sur Ping Me, <?php echo $_SESSION['username']; ?>!</p>
         <header class="header">
             <div class="menu-toggle">
-                <a href="index.php?controller=messagerie" class="user-item-link">
                 <a href="index.php?controller=parametres"> <i class="fas fa-cog"></i> </a>
             </div>
      </header>
@@ -28,10 +27,11 @@
                 <?php endforeach; ?>
             </div>  
         </main>
-
-        <footer class="footer">
-            <p>© 2024 Ping Me. Tous droits réservés.</p>
-        </footer>
     </div>
 </body>
 </html>
+<?php 
+$src1 = "../js/messagerie.js";
+$src2 = "";
+require 'view_fin.php';
+?>
