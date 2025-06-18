@@ -1,0 +1,9 @@
+{
+    "name": "projet/sae-s4",
+    "description": "Application de messagerie avec WebSocket",
+    "type": "project",
+    "require": {
+        "cboden/ratchet": "^0.4"
+    },
+    "minimum-stability": "stable"
+}

@@ -1,15 +1,15 @@
 <?php 
 
 $titre = "Messagerie" ;
-    
+
 $rel1 = "stylesheet";
 $href1= "../css/messagerie.css";
-    
+
 $rel2 = "";
 $href2 = "";
-    
+
 require 'view_debut.php';
-    
+
 ?>
     <div class="messagerie">
         <div class="barre">
