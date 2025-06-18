@@ -1,5 +1,5 @@
 <?php
-require_once 'Utils/parametre.php';// contient les données de connexion à la base de données 
+require_once __DIR__ . '/../Utils/parametre.php'; // contient les données de connexion à la base de données 
 class Model {
     /**
      * Attribut contenant l'instance PDO
@@ -17,21 +17,12 @@ class Model {
     public function __construct()
     {
         try{
-            // Configuration pour MAMP
-            $host = '127.0.0.1';
-            $dbname = 'appli';
-            $username = 'root';
-            $password = 'root';   // Mot de passe par défaut MAMP
-            $port = 8889;         // Port MySQL MAMP
-            
-            $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8";
-            
-            $this->bd = new PDO($dsn, $username, $password);
+            $dsn = SQL_app.':host='. DB_HOST . ';port=' . DB_PORT . ';dbname=' . DB_NAME;
+            $this->bd = new PDO($dsn, DB_USER, DB_PASSWORD);
             $this->bd->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->bd->query("SET NAMES 'utf8'");
-            
-        } catch(PDOException $e) {
-            die("Erreur de connexion à la base de données: " . $e->getMessage());
+        }catch(PDOException $e){
+            die("Erreur de connexion à la base de données: ". $e->getMessage());
         }
     }
 
