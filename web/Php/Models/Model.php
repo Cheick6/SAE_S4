@@ -36,6 +36,14 @@ class Model {
     }
 
     /**
+     * NOUVEAU: Méthode pour accéder à la connexion PDO
+     */
+    public function getBd()
+    {
+        return $this->bd;
+    }
+
+    /**
      * Méthode permettant de récupérer un modèle car le constructeur est privé (Implémentation du Design Pattern Singleton)
      */
     public static function getModel()
@@ -256,7 +264,9 @@ class Model {
             ]);
             
             if ($success) {
-                return $this->bd->lastInsertId();
+                $messageId = $this->bd->lastInsertId();
+                error_log("Message ajouté avec ID: " . $messageId);
+                return $messageId; // CORRECTION: Retourner l'ID au lieu de true
             }
             
             return false;
@@ -316,6 +326,9 @@ class Model {
     public function addAnnotation($annotationData)
     {
         try {
+            // CORRECTION: Ajouter du logging pour debug
+            error_log("Tentative d'ajout annotation: " . print_r($annotationData, true));
+            
             $requete = $this->bd->prepare('
             INSERT INTO Annotation (message_id, annotator_id, emotion, created_at)
             VALUES (:message_id, :annotator_id, :emotion, NOW())');
@@ -326,9 +339,42 @@ class Model {
                 ':emotion' => $annotationData['emotion']
             ]);
             
+            if ($success) {
+                error_log("Annotation ajoutée avec succès");
+            } else {
+                error_log("Échec de l'ajout de l'annotation");
+                error_log("Erreur PDO: " . print_r($requete->errorInfo(), true));
+            }
+            
             return $success;
         } catch (PDOException $e) {
             error_log("Erreur lors de l'ajout de l'annotation : " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Vérifie si un utilisateur a déjà annoté un message
+     * @param int $messageId ID du message
+     * @param int $annotatorId ID de l'utilisateur
+     * @return bool True si l'utilisateur a déjà annoté, false sinon
+     */
+    public function hasUserAnnotatedMessage($messageId, $annotatorId)
+    {
+        try {
+            $query = $this->bd->prepare('
+                SELECT COUNT(*) as count FROM Annotation 
+                WHERE message_id = :message_id AND annotator_id = :annotator_id
+            ');
+            $query->execute([
+                ':message_id' => $messageId,
+                ':annotator_id' => $annotatorId
+            ]);
+            
+            $result = $query->fetch(PDO::FETCH_ASSOC);
+            return $result['count'] > 0;
+        } catch (PDOException $e) {
+            error_log("Erreur hasUserAnnotatedMessage: " . $e->getMessage());
             return false;
         }
     }

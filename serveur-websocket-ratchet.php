@@ -18,11 +18,13 @@ class ChatServer implements MessageComponentInterface {
     protected $clients;
     protected $model;
     protected $userConnections; // Pour associer les connexions aux utilisateurs
+    protected $messageIds; // Pour suivre les IDs des messages
 
     public function __construct() {
         $this->clients = new \SplObjectStorage;
         $this->model = Model::getModel();
         $this->userConnections = [];
+        $this->messageIds = []; // Nouveau: pour tracker les IDs de messages
         echo "ChatServer initialisé avec connexion base de données\n";
     }
 
@@ -48,7 +50,7 @@ class ChatServer implements MessageComponentInterface {
     public function onMessage(ConnectionInterface $from, $msg) {
         $numRecv = count($this->clients) - 1;
         echo sprintf('Connexion %d envoie le message "%s" à %d autre(s) connexion(s)' . "\n",
-            $from->resourceId, $msg, $numRecv);
+            $from->resourceId, substr($msg, 0, 50), $numRecv);
         
         $messageData = json_decode($msg, true);
         
@@ -85,7 +87,6 @@ class ChatServer implements MessageComponentInterface {
 
     private function handleSentMessage($from, $messageData, $senderId) {
         // Pour cette démo, on utilise une conversation par défaut (ID=1)
-        // En production, vous devriez gérer les conversations appropriées
         $conversationId = 1;
         $receiverId = $this->getOtherUserInConversation($senderId, $conversationId);
 
@@ -97,18 +98,47 @@ class ChatServer implements MessageComponentInterface {
             'message' => $messageData['message']
         ];
 
-        $saved = $this->model->addMessage($messageToSave);
+        $messageId = $this->model->addMessage($messageToSave);
         
-        if ($saved) {
-            echo "Message sauvegardé en base de données\n";
+        if ($messageId) {
+            echo "Message sauvegardé en base de données avec ID: {$messageId}\n";
             
-            // Préparer le message pour diffusion
-            $messageData['type'] = 'received';
-            $messageData['sender_id'] = $senderId;
-            $messageData['message_id'] = $this->getLastInsertedMessageId();
+            // CORRECTION: Stocker l'association entre l'ID client et l'ID BDD
+            $clientMessageId = $messageData['message_id'];
+            $this->messageIds[$clientMessageId] = $messageId;
+            
+            // NOUVEAU: Sauvegarder l'annotation de l'expéditeur
+            if (isset($messageData['annotations']) && !empty($messageData['annotations'])) {
+                $emotion = $this->convertEmojiToEmotion($messageData['annotations']);
+                if ($emotion) {
+                    $senderAnnotation = [
+                        'message_id' => $messageId,
+                        'annotator_id' => $senderId,
+                        'emotion' => $emotion
+                    ];
+                    
+                    $annotationSaved = $this->model->addAnnotation($senderAnnotation);
+                    if ($annotationSaved) {
+                        echo "✅ Annotation de l'expéditeur sauvegardée: {$emotion} pour le message {$messageId}\n";
+                    } else {
+                        echo "❌ Erreur lors de la sauvegarde de l'annotation de l'expéditeur\n";
+                    }
+                }
+            }
+            
+            // Préparer le message pour diffusion avec le vrai ID de la BDD
+            $messageForBroadcast = [
+                'type' => 'received',
+                'message' => $messageData['message'],
+                'annotations' => $messageData['annotations'],
+                'sender_id' => $senderId,
+                'message_id' => $clientMessageId, // Garder l'ID client pour le frontend
+                'db_message_id' => $messageId, // Ajouter l'ID de la BDD
+                'timestamp' => date('Y-m-d H:i:s')
+            ];
             
             // Diffuser aux autres clients
-            $this->broadcastToOthers($from, json_encode($messageData));
+            $this->broadcastToOthers($from, json_encode($messageForBroadcast));
         } else {
             echo "Erreur lors de la sauvegarde du message\n";
             $from->send(json_encode(['error' => 'Erreur de sauvegarde']));
@@ -116,8 +146,45 @@ class ChatServer implements MessageComponentInterface {
     }
 
     private function handleAnnotation($from, $messageData, $annotatorId) {
+        echo "Traitement annotation reçue: " . json_encode($messageData) . "\n";
+        
         if (!isset($messageData['messageId']) || !isset($messageData['annotations'])) {
             echo "Données d'annotation manquantes\n";
+            echo "messageId présent: " . (isset($messageData['messageId']) ? 'oui' : 'non') . "\n";
+            echo "annotations présent: " . (isset($messageData['annotations']) ? 'oui' : 'non') . "\n";
+            return;
+        }
+
+        // CORRECTION: Récupérer l'ID réel de la BDD
+        $clientMessageId = $messageData['messageId'];
+        $realMessageId = null;
+        
+        // Chercher l'ID réel dans notre mapping
+        if (isset($this->messageIds[$clientMessageId])) {
+            $realMessageId = $this->messageIds[$clientMessageId];
+        } else {
+            // Fallback: extraire le timestamp et essayer de trouver le message
+            if (preg_match('/message-(\d+)/', $clientMessageId, $matches)) {
+                $timestamp = $matches[1];
+                // Ici vous pourriez chercher le message par timestamp approximatif
+                // Pour l'instant, on utilise le dernier message ID comme fallback
+                $realMessageId = $this->getLatestMessageId();
+            }
+        }
+        
+        if (!$realMessageId) {
+            echo "Impossible de trouver l'ID réel du message pour: {$clientMessageId}\n";
+            return;
+        }
+
+        // NOUVEAU: Vérifier si l'utilisateur a déjà annoté ce message
+        if ($this->model->hasUserAnnotatedMessage($realMessageId, $annotatorId)) {
+            echo "⚠️ L'utilisateur {$annotatorId} a déjà annoté le message {$realMessageId}\n";
+            $from->send(json_encode([
+                'error' => 'Vous avez déjà annoté ce message',
+                'type' => 'annotation_error',
+                'messageId' => $clientMessageId
+            ]));
             return;
         }
 
@@ -129,12 +196,11 @@ class ChatServer implements MessageComponentInterface {
             return;
         }
 
-        // Extraire l'ID du message depuis l'ID du conteneur
-        $messageId = $this->extractMessageIdFromContainer($messageData['messageId']);
+        echo "Tentative d'enregistrement annotation: message_id={$realMessageId}, annotator_id={$annotatorId}, emotion={$emotion}\n";
         
         // Sauvegarder l'annotation
         $annotationToSave = [
-            'message_id' => $messageId,
+            'message_id' => $realMessageId,
             'annotator_id' => $annotatorId,
             'emotion' => $emotion
         ];
@@ -142,12 +208,17 @@ class ChatServer implements MessageComponentInterface {
         $saved = $this->model->addAnnotation($annotationToSave);
         
         if ($saved) {
-            echo "Annotation sauvegardée: {$emotion} pour le message {$messageId}\n";
+            echo "✅ Annotation sauvegardée avec succès: {$emotion} pour le message {$realMessageId}\n";
             
             // Diffuser l'annotation aux autres clients
             $this->broadcastToOthers($from, json_encode($messageData));
         } else {
-            echo "Erreur lors de la sauvegarde de l'annotation\n";
+            echo "❌ Erreur lors de la sauvegarde de l'annotation\n";
+            $from->send(json_encode([
+                'error' => 'Erreur lors de la sauvegarde de l\'annotation',
+                'type' => 'annotation_error',
+                'messageId' => $clientMessageId
+            ]));
         }
     }
 
@@ -161,24 +232,23 @@ class ChatServer implements MessageComponentInterface {
             '😰' => 'peur'
         ];
         
+        echo "Conversion emoji '{$emoji}' -> " . (isset($emojiMap[$emoji]) ? $emojiMap[$emoji] : 'non trouvé') . "\n";
         return isset($emojiMap[$emoji]) ? $emojiMap[$emoji] : null;
     }
 
-    private function extractMessageIdFromContainer($containerId) {
-        // Le conteneur a un ID comme "message-1672589123456"
-        // On extrait le timestamp et on utilise ça comme ID temporaire
-        // En production, vous devriez utiliser un vrai ID de message de la BD
-        if (preg_match('/message-(\d+)/', $containerId, $matches)) {
-            return $matches[1];
+    private function getLatestMessageId() {
+        // NOUVEAU: Méthode pour récupérer le dernier ID de message
+        // Vous devriez ajouter cette méthode dans Model.php
+        try {
+            // Requête directe pour récupérer le dernier message_id
+            $pdo = $this->model->getBd(); // Vous devez ajouter cette méthode dans Model.php
+            $stmt = $pdo->query('SELECT MAX(message_id) as max_id FROM Message');
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result['max_id'] ?? 1;
+        } catch (Exception $e) {
+            echo "Erreur lors de la récupération du dernier message ID: " . $e->getMessage() . "\n";
+            return 1;
         }
-        return 1; // Valeur par défaut
-    }
-
-    private function getLastInsertedMessageId() {
-        // Cette méthode devrait retourner l'ID du dernier message inséré
-        // Pour l'instant, on retourne 1 comme valeur par défaut
-        // Vous devriez modifier Model.php pour retourner l'ID inséré
-        return 1;
     }
 
     private function getOtherUserInConversation($senderId, $conversationId) {

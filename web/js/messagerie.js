@@ -61,6 +61,7 @@ socket.onclose = function(event) {
 
 let annotationEnAttente = false;
 let messageCounter = 0;
+let currentMessageIdForAnnotation = null; // NOUVEAU: pour tracker le message à annoter
 
 function scrollToBottom() {
     const messageDisplayAreaUser = document.getElementById('messageDisplayAreaUser');
@@ -128,6 +129,7 @@ function envoyerMessage() {
         timestamp: new Date().toISOString()
     };
 
+    console.log("Envoi du message:", messageData);
     socket.send(JSON.stringify(messageData));
     afficherMessage(messageData, true);
 
@@ -166,15 +168,27 @@ document.getElementById('messageInput').addEventListener('keypress', function (e
 socket.onmessage = function (event) {
     try {
         const data = JSON.parse(event.data);
+        console.log("Message reçu du serveur:", data);
         
         if (data.error) {
-            alert('Erreur: ' + data.error);
+            // NOUVEAU: Gestion des erreurs d'annotation
+            if (data.type === 'annotation_error') {
+                alert('Erreur: ' + data.error);
+                // Marquer le message comme déjà annoté pour éviter les tentatives répétées
+                const messageContainer = document.getElementById(data.messageId);
+                if (messageContainer) {
+                    markMessageAsAnnotated(messageContainer);
+                }
+            } else {
+                alert('Erreur: ' + data.error);
+            }
             return;
         }
 
         if (data.type === 'received') {
             afficherMessage(data, false);
             annotationEnAttente = true;
+            currentMessageIdForAnnotation = data.message_id; // CORRECTION: stocker l'ID du message
         } else {
             console.log('Message reçu:', data);
         }
@@ -190,6 +204,9 @@ function afficherMessage(messageData, showAnnotations) {
     // Utiliser l'ID du message ou créer un ID unique
     const messageId = messageData.message_id || `message-${Date.now()}`;
     messageContainer.id = messageId;
+    
+    // CORRECTION: Stocker l'ID du message dans un attribut data
+    messageContainer.setAttribute('data-message-id', messageId);
 
     const messageElement = document.createElement('div');
     messageElement.classList.add('message', messageData.type);
@@ -225,7 +242,9 @@ function afficherMessage(messageData, showAnnotations) {
 }
 
 function annoterMessageRecu(messageContainer) {
-    if (messageContainer.classList.contains('annotated')) {
+    // NOUVEAU: Vérifier si le message a déjà été annoté
+    if (messageContainer.classList.contains('annotated') || messageContainer.classList.contains('user-annotated')) {
+        alert("Ce message a déjà été annoté.");
         return;
     }
 
@@ -256,14 +275,7 @@ function annoterMessageRecu(messageContainer) {
     finAnnotationButton.disabled = true;
 
     finAnnotationButton.onclick = function () {
-        messageContainer.classList.add('annotated');
-        messageContainer.removeChild(finAnnotationButton);
-        messageContainer.removeChild(emojiSelect);
-        messageContainer.removeChild(validerButton);
-        const btn = messageContainer.querySelector('.annoter-button');
-        if (btn) messageContainer.removeChild(btn);
-        
-        annotationEnAttente = false;
+        markMessageAsAnnotated(messageContainer);
         
         // Notifier le serveur que l'annotation est terminée
         if (socket.readyState === WebSocket.OPEN) {
@@ -292,6 +304,12 @@ function ajouterAnnotations(messageContainer, emojiSelect) {
     const selectedEmoji = emojiSelect.value;
 
     if (selectedEmoji !== '') {
+        // NOUVEAU: Vérifier si le message a déjà été annoté par cet utilisateur
+        if (messageContainer.classList.contains('user-annotated')) {
+            alert("Vous avez déjà annoté ce message.");
+            return;
+        }
+
         const annotationContainer = document.createElement('div');
         annotationContainer.classList.add('emoji-annotation');
 
@@ -302,19 +320,57 @@ function ajouterAnnotations(messageContainer, emojiSelect) {
         const messageElement = messageContainer.querySelector('.message');
         messageContainer.insertBefore(annotationContainer, messageElement.nextSibling);
 
+        // CORRECTION: Utiliser l'ID correct du message
+        const messageId = messageContainer.getAttribute('data-message-id') || messageContainer.id;
+        
         // Envoyer l'annotation au serveur avec les informations complètes
         const annotationData = {
             type: 'annotation',
-            messageId: messageContainer.id,
+            messageId: messageId, // CORRECTION: utiliser messageId avec 'I' majuscule
             annotations: selectedEmoji,
             user_id: userId,
             timestamp: new Date().toISOString()
         };
         
+        console.log("Envoi de l'annotation:", annotationData);
+        
         if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify(annotationData));
+            // NOUVEAU: Marquer immédiatement le message comme annoté côté client
+            messageContainer.classList.add('user-annotated');
+        } else {
+            console.error("WebSocket non connecté, impossible d'envoyer l'annotation");
         }
     }
+}
+
+// NOUVEAU: Fonction pour marquer un message comme déjà annoté
+function markMessageAsAnnotated(messageContainer) {
+    messageContainer.classList.add('annotated', 'user-annotated');
+    
+    // Supprimer les boutons d'annotation s'ils existent encore
+    const annoterButton = messageContainer.querySelector('.annoter-button');
+    const emojiSelect = messageContainer.querySelector('#emojiSelectAnnotation');
+    const validerButton = messageContainer.querySelector('button');
+    const finAnnotationButton = messageContainer.querySelector('button:last-child');
+    
+    if (annoterButton) messageContainer.removeChild(annoterButton);
+    if (emojiSelect) messageContainer.removeChild(emojiSelect);
+    if (validerButton && validerButton.textContent === 'Valider') messageContainer.removeChild(validerButton);
+    if (finAnnotationButton && finAnnotationButton.textContent === 'Fin annotation') messageContainer.removeChild(finAnnotationButton);
+    
+    // Ajouter un indicateur visuel
+    const annotatedIndicator = document.createElement('div');
+    annotatedIndicator.className = 'annotated-indicator';
+    annotatedIndicator.textContent = '✓ Déjà annoté';
+    annotatedIndicator.style.fontSize = '12px';
+    annotatedIndicator.style.color = '#666';
+    annotatedIndicator.style.fontStyle = 'italic';
+    messageContainer.appendChild(annotatedIndicator);
+    
+    // Réinitialiser les variables d'état si nécessaire
+    annotationEnAttente = false;
+    currentMessageIdForAnnotation = null;
 }
 
 // Auto-scroll au chargement
