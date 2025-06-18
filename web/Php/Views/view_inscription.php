@@ -12,7 +12,8 @@ require 'view_debut.php';
 
 ?>
 
- <h1>Ping Me !</h1>
+ <h1>Ping Me</h1>
+ <img src="../img/logo.png" id="logo" alt="Logo de PingMe">
  <h2>Vous n'êtes toujours pas inscrit ?</h2>
  <h3>Inscriver vous pour commencer !</h3>
 
@@ -65,7 +66,7 @@ require 'view_debut.php';
     
         <!-- Bouton Valider -->
         <div>
-            <button type="submit" id="submit" name="action" value="inscription">Valider</button>
+            <button type="submit" id="submit" class="submit_inscription" name="action" value="inscription">Valider</button>
         </div>
     </form>
 
@@ -76,7 +77,7 @@ require 'view_debut.php';
         <?php endif ?>
     </div>
  
-     <p>Déja inscrit ? <a href="index.php?controller=connexion">Connectez vous</a> ! </p> 
+     <h3>Déja inscrit ? <a href="index.php?controller=connexion">Connectez vous</a> ! </h3> 
  
 <?php 
 $src1 = "../js/submit.js";

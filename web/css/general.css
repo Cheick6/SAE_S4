@@ -1,3 +1,16 @@
+:root {
+    --primary: #4a6fa5;
+    --secondary: #50e3c2;
+    --background: linear-gradient(135deg, #50e3c2 0%, #4a6fa5 100%);
+    --white: #fff;
+    --input-bg: #f7fafc;
+    --input-border: #d1d9e6;
+    --input-focus: #4a6fa5;
+    --shadow: 0 8px 32px 0 rgba(74, 111, 165, 0.15);
+    --radius: 18px;
+    --error: #ff4d4f;
+    --success: #4caf50;
+}
 body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f9;
@@ -50,10 +63,11 @@ footer{
 
 #submit{
     
-    background-color: rgb(252, 252, 252);
-    color: rgb(0, 0, 0);
-    border-color: black;
-    border-style: solid;
+    /* background-color: rgb(252, 252, 252); */
+    background: var(--background);
+    color: white;
+    /* border-color: black; */
+    border-style: none;
     border-radius: 18px ;
     font-size: 1.5rem;
     align-items: center;
