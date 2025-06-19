@@ -119,7 +119,7 @@ body {
 
 .message.sent {
     background-color: var(--sent-message);
-    color: #0f2e4c;
+    color: #f0f3f6;
     font-weight: 500;
     border-bottom-right-radius: 4px;
 }
