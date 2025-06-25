@@ -25,6 +25,7 @@ if (!userId) {
 // Détecter automatiquement l'adresse du serveur
 const wsHost = window.location.hostname;
 const socket = new WebSocket(`ws://${wsHost}:8081?user_id=${userId}`);
+let canSendMessage = true; // Initialisé à true pour permettre l'envoi du premier message
 
 // Ajout du code de statut de la connexion
 const statusMessage = document.getElementById('status-message');
@@ -71,6 +72,11 @@ function scrollToBottom() {
 }
 
 function envoyerMessage() {
+
+    if (!canSendMessage) {
+        alert("Veuillez attendre la réponse de l'autre personne avant d'envoyer un nouveau message.");
+        return;
+    }
     const messageInput = document.getElementById('messageInput');
     const emojiList = document.getElementById('emojiList');
     const messageText = messageInput.value.trim();
@@ -122,6 +128,9 @@ function envoyerMessage() {
     socket.send(JSON.stringify(messageData));
     afficherMessage(messageData, true);
 
+    canSendMessage = false; // L'utilisateur a envoyé un message, il doit attendre une 
+
+
     // Nettoyer les champs
     messageInput.value = '';
     emojiList.innerHTML = '';
@@ -166,6 +175,8 @@ socket.onmessage = function (event) {
                 if (messageContainer) {
                     marquerMessageCommeAnnoté(messageContainer);
                 }
+
+
             } else {
                 alert('Erreur: ' + data.error);
             }
@@ -176,6 +187,11 @@ socket.onmessage = function (event) {
             afficherMessage(data, false);
             annotationEnAttente = true;
             currentMessageIdForAnnotation = data.message_id;
+            
+            if (data.sender_id && data.sender_id != userId) { 
+                canSendMessage = true; // L'utilisateur a reçu une réponse, il peut envoyer un nouveau message
+            }
+
         } else {
             console.log('Message reçu:', data);
         }
