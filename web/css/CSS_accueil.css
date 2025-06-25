@@ -1,16 +1,40 @@
-body {
-    font-family: sans-serif;
+/* CSS pour la nouvelle page d'accueil PingMe */
+
+:root {
+    --primary: #4a6fa5;
+    --secondary: #50e3c2;
+    --background: linear-gradient(135deg, #50e3c2 0%, #4a6fa5 100%);
+    --white: #fff;
+    --text-dark: #2c3e50;
+    --text-light: #64748b;
+    --shadow: 0 8px 32px 0 rgba(74, 111, 165, 0.15);
+    --shadow-hover: 0 12px 40px 0 rgba(74, 111, 165, 0.25);
+    --radius: 18px;
+}
+
+* {
     margin: 0;
-    display: flex; /* Pour que le footer soit toujours en bas */
-    flex-direction: column; /* Empile les éléments verticalement */
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--background);
+    background-attachment: fixed;
+    min-height: 100vh;
+    color: var(--text-dark);
+    display: flex;
+    flex-direction: column;
 }
 
 .container {
-    max-width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    max-width: 1200px;
     margin: 0 auto;
-    background-color: white;
-    border-radius: 8px;
-    overflow: hidden;
+    padding: 0 20px;
 }
 
 /* Header */
@@ -18,91 +42,309 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px;
-    background-color: #fff;
-    border-bottom: 1px solid #eee;
+    padding: 20px 0;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius);
+    margin: 20px 0;
+    padding: 20px 30px;
+    box-shadow: var(--shadow);
 }
 
-.menu-toggle {
-    cursor: pointer;
-}
-
-.title {
-    font-size: 1.5em;
-    font-weight: bold;
-    margin: 0;
-    text-align: center;
-    flex-grow: 1;
-}
-
-.send-icon {
-    cursor: pointer;
-}
-
-.send-icon i,
-.menu-toggle i {
-    font-size: 20px;
-    color: #777;
-}
-
-/* User List */
-.user-list {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-around;
-    padding: 20px;
-}
-
-.user-item-link {
-    text-decoration: none;
-    color: inherit;
-    width: calc(50% - 20px);
-    margin-bottom: 15px;
-    box-shadow:  5px 5px rgb(0, 0, 0);
-    border-radius: 5px;
-}
-
-.user-item {
+.app-title {
+    color: var(--white);
+    font-size: 2rem;
+    font-weight: 700;
     display: flex;
     align-items: center;
-    padding: 15px;
-    border-radius: 8px;
-    background-color: #f2f2f2;
-    transition: background-color 0.3s ease;
+    gap: 12px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.user-item.alternate {
-    background-color: #cce8e1;
+.app-title i {
+    font-size: 2.2rem;
+    color: var(--white);
 }
 
-.user-item:hover {
-    background-color: #e0e0e0;
+.settings-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--white);
+    padding: 12px;
+    border-radius: 50%;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.user-item i {
-    font-size: 24px;
-    margin-right: 15px;
-    color: #777;
+.settings-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.user-name {
-    font-size: 16px;
-    color: #333;
+.settings-btn i {
+    font-size: 1.2rem;
 }
 
-/* Footer */
-.footer {
+/* Contenu principal */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     text-align: center;
-    padding: 10px;
-    background-color: #f2f2f2;
-    position: fixed;
-    bottom: 0;
+    padding: 40px 0;
+    gap: 40px;
+}
+
+/* Section de bienvenue */
+.welcome-section {
+    background: var(--white);
+    padding: 40px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    max-width: 600px;
     width: 100%;
 }
 
-/* Media Queries pour la Responsivité */
-@media (max-width: 600px) {
-    .user-item-link {
-        width: 100%;
+.welcome-icon {
+    margin-bottom: 20px;
+}
+
+.welcome-icon i {
+    font-size: 4rem;
+    background: var(--background);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.welcome-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: var(--text-dark);
+}
+
+.welcome-subtitle {
+    font-size: 1.2rem;
+    color: var(--text-light);
+    line-height: 1.6;
+}
+
+/* Section d'action */
+.action-section {
+    width: 100%;
+    max-width: 400px;
+}
+
+.start-chat-btn {
+    display: block;
+    background: var(--white);
+    border: none;
+    border-radius: var(--radius);
+    padding: 30px;
+    box-shadow: var(--shadow);
+    text-decoration: none;
+    color: var(--text-dark);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+}
+
+.start-chat-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--background);
+    transition: left 0.3s ease;
+    z-index: 1;
+}
+
+.start-chat-btn:hover::before {
+    left: 0;
+}
+
+.start-chat-btn:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-hover);
+}
+
+.start-chat-btn:hover .btn-content,
+.start-chat-btn:hover .btn-description {
+    color: var(--white);
+    z-index: 2;
+    position: relative;
+}
+
+.btn-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 10px;
+    z-index: 2;
+    position: relative;
+}
+
+.btn-content i {
+    font-size: 2rem;
+    color: var(--primary);
+    transition: color 0.3s ease;
+}
+
+.btn-text {
+    font-size: 1.4rem;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.btn-description {
+    font-size: 1rem;
+    color: var(--text-light);
+    transition: color 0.3s ease;
+    z-index: 2;
+    position: relative;
+}
+
+.start-chat-btn:hover .btn-content i {
+    color: var(--white);
+}
+
+
+
+/* Footer */
+.footer {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    color: var(--white);
+    text-align: center;
+    padding: 20px;
+    border-radius: var(--radius);
+    margin: 20px 0;
+    box-shadow: var(--shadow);
+}
+
+.footer p {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.welcome-section,
+.action-section {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.action-section {
+    animation-delay: 0.2s;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+    
+    .header {
+        padding: 15px 20px;
+        margin: 15px 0;
+    }
+    
+    .app-title {
+        font-size: 1.5rem;
+    }
+    
+    .app-title i {
+        font-size: 1.7rem;
+    }
+    
+    .welcome-section {
+        padding: 30px 25px;
+    }
+    
+    .welcome-title {
+        font-size: 2rem;
+    }
+    
+    .welcome-subtitle {
+        font-size: 1.1rem;
+    }
+    
+    .start-chat-btn {
+        padding: 25px 20px;
+    }
+    
+    .btn-text {
+        font-size: 1.2rem;
+    }
+    
+    .main-content {
+        gap: 30px;
+        padding: 20px 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .app-title {
+        font-size: 1.3rem;
+    }
+    
+    .welcome-title {
+        font-size: 1.8rem;
+    }
+    
+    .welcome-icon i {
+        font-size: 3rem;
+    }
+    
+    .btn-content {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .btn-content i {
+        font-size: 1.8rem;
+    }
+}
+
+/* Accessibilité */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Mode sombre */
+@media (prefers-color-scheme: dark) {
+    .welcome-section {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--white);
+    }
+    
+    .start-chat-btn {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--white);
     }
 }
