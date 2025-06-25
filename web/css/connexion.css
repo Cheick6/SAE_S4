@@ -1,3 +1,19 @@
+:root {
+    --background: linear-gradient(135deg, #50e3c2 0%, #4a6fa5 100%); 
+}
+body {
+    min-height: 100vh;
+    background: var(--background);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    /* c'est mon fichier css regarde manel */
+}
+
+
 #logo{
     width:auto;
 }
