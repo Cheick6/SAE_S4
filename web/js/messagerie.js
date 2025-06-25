@@ -61,24 +61,13 @@ socket.onclose = function(event) {
 
 let annotationEnAttente = false;
 let messageCounter = 0;
-let currentMessageIdForAnnotation = null; // NOUVEAU: pour tracker le message à annoter
+let currentMessageIdForAnnotation = null;
 
 function scrollToBottom() {
     const messageDisplayAreaUser = document.getElementById('messageDisplayAreaUser');
     if (messageDisplayAreaUser) {
         messageDisplayAreaUser.scrollTop = messageDisplayAreaUser.scrollHeight;
     }
-}
-
-function ajouterEmoji(emoji) {
-    const emojiList = document.getElementById('emojiList');
-    const emojiSpan = document.createElement('span');
-    emojiSpan.textContent = emoji;
-    emojiSpan.style.cursor = 'pointer';
-    emojiSpan.onclick = function () {
-        emojiList.removeChild(emojiSpan);
-    };
-    emojiList.appendChild(emojiSpan);
 }
 
 function envoyerMessage() {
@@ -129,7 +118,7 @@ function envoyerMessage() {
         timestamp: new Date().toISOString()
     };
 
-    console.log("Envoi du message:", messageData);
+    console.log("Envoi du message avec annotations:", messageData);
     socket.send(JSON.stringify(messageData));
     afficherMessage(messageData, true);
 
@@ -171,13 +160,11 @@ socket.onmessage = function (event) {
         console.log("Message reçu du serveur:", data);
         
         if (data.error) {
-            // NOUVEAU: Gestion des erreurs d'annotation
             if (data.type === 'annotation_error') {
                 alert('Erreur: ' + data.error);
-                // Marquer le message comme déjà annoté pour éviter les tentatives répétées
                 const messageContainer = document.getElementById(data.messageId);
                 if (messageContainer) {
-                    markMessageAsAnnotated(messageContainer);
+                    marquerMessageCommeAnnoté(messageContainer);
                 }
             } else {
                 alert('Erreur: ' + data.error);
@@ -188,7 +175,7 @@ socket.onmessage = function (event) {
         if (data.type === 'received') {
             afficherMessage(data, false);
             annotationEnAttente = true;
-            currentMessageIdForAnnotation = data.message_id; // CORRECTION: stocker l'ID du message
+            currentMessageIdForAnnotation = data.message_id;
         } else {
             console.log('Message reçu:', data);
         }
@@ -197,15 +184,13 @@ socket.onmessage = function (event) {
     }
 };
 
+// Fonction pour afficher un message
 function afficherMessage(messageData, showAnnotations) {
     const messageContainer = document.createElement('div');
     messageContainer.classList.add('message-container', messageData.type);
     
-    // Utiliser l'ID du message ou créer un ID unique
     const messageId = messageData.message_id || `message-${Date.now()}`;
     messageContainer.id = messageId;
-    
-    // CORRECTION: Stocker l'ID du message dans un attribut data
     messageContainer.setAttribute('data-message-id', messageId);
 
     const messageElement = document.createElement('div');
@@ -213,27 +198,14 @@ function afficherMessage(messageData, showAnnotations) {
     messageElement.textContent = messageData.message;
     messageContainer.appendChild(messageElement);
 
-    // Afficher les annotations de l'expéditeur
-    if (showAnnotations && messageData.annotations) {
-        const annotationContainer = document.createElement('div');
-        annotationContainer.classList.add('emoji-annotation');
-        for (let i = 0; i < messageData.annotations.length; i++) {
-            const emojiSpan = document.createElement('span');
-            emojiSpan.textContent = messageData.annotations[i];
-            annotationContainer.appendChild(emojiSpan);
-        }
-        messageContainer.appendChild(annotationContainer);
+    // Afficher les annotations de l'expéditeur pour les messages envoyés
+    if (messageData.type === 'sent' && messageData.annotations) {
+        afficherAnnotationExpéditeur(messageContainer, messageData.annotations);
     }
 
-    // Afficher le bouton 'Annoter' uniquement pour les messages reçus
+    // Bouton d'annotation pour les messages reçus non annotés
     if (messageData.type === 'received' && !messageContainer.classList.contains('annotated')) {
-        const annoterButton = document.createElement('button');
-        annoterButton.classList.add('annoter-button');
-        annoterButton.textContent = 'Annoter';
-        annoterButton.onclick = function () {
-            annoterMessageRecu(messageContainer);
-        };
-        messageContainer.appendChild(annoterButton);
+        ajouterBoutonAnnotation(messageContainer);
     }
 
     const messageDisplayAreaUser = document.getElementById('messageDisplayAreaUser');
@@ -241,136 +213,193 @@ function afficherMessage(messageData, showAnnotations) {
     scrollToBottom();
 }
 
-function annoterMessageRecu(messageContainer) {
-    // NOUVEAU: Vérifier si le message a déjà été annoté
-    if (messageContainer.classList.contains('annotated') || messageContainer.classList.contains('user-annotated')) {
-        alert("Ce message a déjà été annoté.");
+// Fonction pour afficher l'annotation de l'expéditeur
+function afficherAnnotationExpéditeur(messageContainer, annotations) {
+    const annotationContainer = document.createElement('div');
+    annotationContainer.classList.add('emoji-annotation', 'sender-annotation');
+    
+    const annotations_str = typeof annotations === 'string' ? 
+        annotations : 
+        (Array.isArray(annotations) ? annotations.join('') : '');
+        
+    const emojiSpan = document.createElement('span');
+    emojiSpan.textContent = annotations_str;
+    emojiSpan.title = "Votre émotion";
+    annotationContainer.appendChild(emojiSpan);
+    messageContainer.appendChild(annotationContainer);
+}
+
+// Fonction pour ajouter le bouton d'annotation
+function ajouterBoutonAnnotation(messageContainer) {
+    const buttonContainer = document.createElement('div');
+    buttonContainer.classList.add('annotation-controls');
+    
+    const annoterButton = document.createElement('button');
+    annoterButton.classList.add('annoter-button');
+    annoterButton.textContent = 'Réagir avec un émoji';
+    annoterButton.onclick = function () {
+        ouvrirInterfaceAnnotation(messageContainer);
+    };
+    
+    buttonContainer.appendChild(annoterButton);
+    messageContainer.appendChild(buttonContainer);
+}
+
+// Fonction pour ouvrir l'interface d'annotation
+function ouvrirInterfaceAnnotation(messageContainer) {
+    // Vérifier si déjà annoté
+    if (messageContainer.classList.contains('user-annotated')) {
+        alert("Vous avez déjà annoté ce message.");
         return;
     }
 
-    const emojiSelect = document.createElement('select');
-    emojiSelect.id = 'emojiSelectAnnotation';
+    // Supprimer les contrôles existants
+    const existingControls = messageContainer.querySelector('.annotation-controls');
+    if (existingControls) {
+        existingControls.remove();
+    }
+
+    // Créer l'interface d'annotation
+    const annotationInterface = document.createElement('div');
+    annotationInterface.classList.add('annotation-interface');
     
-    // Émojis d'annotation (nettoyés)
-    const emojis = ['😊', '😡', '😞', '😖', '😵‍💫', '😰'];
+    // Titre
+    const title = document.createElement('div');
+    title.classList.add('annotation-title');
+    title.textContent = 'Choisissez votre réaction :';
+    annotationInterface.appendChild(title);
     
-    // Option vide par défaut
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.text = 'Choisir une émotion...';
-    emojiSelect.appendChild(defaultOption);
+    // Container des émojis
+    const emojiContainer = document.createElement('div');
+    emojiContainer.classList.add('emoji-selector');
     
-    emojis.forEach(function (emoji) {
-        const option = document.createElement('option');
-        option.value = emoji;
-        option.text = emoji;
-        emojiSelect.appendChild(option);
+    const emojis = [
+        { emoji: '😊', label: 'Joie' },
+        { emoji: '😡', label: 'Colère' },
+        { emoji: '😞', label: 'Tristesse' },
+        { emoji: '😖', label: 'Dégoût' },
+        { emoji: '😵‍💫', label: 'Surprise' },
+        { emoji: '😰', label: 'Peur' }
+    ];
+    
+    emojis.forEach(emojiData => {
+        const emojiButton = document.createElement('button');
+        emojiButton.classList.add('emoji-button');
+        emojiButton.innerHTML = `
+            <span class="emoji">${emojiData.emoji}</span>
+            <span class="emoji-label">${emojiData.label}</span>
+        `;
+        emojiButton.onclick = function() {
+            selectionnerEmoji(messageContainer, emojiData.emoji, annotationInterface);
+        };
+        emojiContainer.appendChild(emojiButton);
     });
-
-    const validerButton = document.createElement('button');
-    validerButton.textContent = 'Valider';
-
-    const finAnnotationButton = document.createElement('button');
-    finAnnotationButton.textContent = 'Fin annotation';
-    finAnnotationButton.disabled = true;
-
-    finAnnotationButton.onclick = function () {
-        markMessageAsAnnotated(messageContainer);
-        
-        // Notifier le serveur que l'annotation est terminée
-        if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ 
-                type: 'annotation-complete',
-                user_id: userId
-            }));
-        }
+    
+    annotationInterface.appendChild(emojiContainer);
+    
+    // Bouton annuler
+    const cancelButton = document.createElement('button');
+    cancelButton.classList.add('cancel-button');
+    cancelButton.textContent = 'Annuler';
+    cancelButton.onclick = function() {
+        fermerInterfaceAnnotation(messageContainer, annotationInterface);
     };
-
-    validerButton.onclick = function () {
-        if (emojiSelect.value !== '') {
-            ajouterAnnotations(messageContainer, emojiSelect);
-            finAnnotationButton.disabled = false;
-        } else {
-            alert("Veuillez sélectionner une émotion.");
-        }
-    };
-
-    messageContainer.appendChild(emojiSelect);
-    messageContainer.appendChild(validerButton);
-    messageContainer.appendChild(finAnnotationButton);
+    
+    annotationInterface.appendChild(cancelButton);
+    messageContainer.appendChild(annotationInterface);
 }
 
-function ajouterAnnotations(messageContainer, emojiSelect) {
-    const selectedEmoji = emojiSelect.value;
+// Fonction pour sélectionner un emoji
+function selectionnerEmoji(messageContainer, selectedEmoji, annotationInterface) {
+    // Vérifier si déjà annoté
+    if (messageContainer.classList.contains('user-annotated')) {
+        alert("Vous avez déjà annoté ce message.");
+        return;
+    }
 
-    if (selectedEmoji !== '') {
-        // NOUVEAU: Vérifier si le message a déjà été annoté par cet utilisateur
-        if (messageContainer.classList.contains('user-annotated')) {
-            alert("Vous avez déjà annoté ce message.");
-            return;
-        }
+    // Créer l'annotation visuelle
+    const annotationContainer = document.createElement('div');
+    annotationContainer.classList.add('emoji-annotation', 'receiver-annotation');
 
-        const annotationContainer = document.createElement('div');
-        annotationContainer.classList.add('emoji-annotation');
+    const emojiSpan = document.createElement('span');
+    emojiSpan.textContent = selectedEmoji;
+    emojiSpan.title = "Votre réaction";
+    annotationContainer.appendChild(emojiSpan);
 
-        const emojiSpan = document.createElement('span');
-        emojiSpan.textContent = selectedEmoji;
-        annotationContainer.appendChild(emojiSpan);
+    // Insérer l'annotation après le message
+    const messageElement = messageContainer.querySelector('.message');
+    messageContainer.insertBefore(annotationContainer, messageElement.nextSibling);
 
-        const messageElement = messageContainer.querySelector('.message');
-        messageContainer.insertBefore(annotationContainer, messageElement.nextSibling);
+    // Marquer comme annoté
+    messageContainer.classList.add('user-annotated');
 
-        // CORRECTION: Utiliser l'ID correct du message
-        const messageId = messageContainer.getAttribute('data-message-id') || messageContainer.id;
-        
-        // Envoyer l'annotation au serveur avec les informations complètes
-        const annotationData = {
-            type: 'annotation',
-            messageId: messageId, // CORRECTION: utiliser messageId avec 'I' majuscule
-            annotations: selectedEmoji,
-            user_id: userId,
-            timestamp: new Date().toISOString()
-        };
-        
-        console.log("Envoi de l'annotation:", annotationData);
-        
-        if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify(annotationData));
-            // NOUVEAU: Marquer immédiatement le message comme annoté côté client
-            messageContainer.classList.add('user-annotated');
-        } else {
-            console.error("WebSocket non connecté, impossible d'envoyer l'annotation");
-        }
+    // Envoyer au serveur
+    const messageId = messageContainer.getAttribute('data-message-id') || messageContainer.id;
+    const annotationData = {
+        type: 'annotation',
+        messageId: messageId,
+        annotations: selectedEmoji,
+        user_id: userId,
+        timestamp: new Date().toISOString()
+    };
+    
+    console.log("Envoi de l'annotation:", annotationData);
+    
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(annotationData));
+    } else {
+        console.error("WebSocket non connecté");
+    }
+
+    // Fermer l'interface d'annotation
+    annotationInterface.remove();
+    
+    // Ajouter l'indicateur de fin
+    ajouterIndicateurAnnotationTerminée(messageContainer);
+    
+    // Réinitialiser l'état global
+    annotationEnAttente = false;
+    currentMessageIdForAnnotation = null;
+}
+
+// Fonction pour fermer l'interface d'annotation
+function fermerInterfaceAnnotation(messageContainer, annotationInterface) {
+    annotationInterface.remove();
+    ajouterBoutonAnnotation(messageContainer);
+}
+
+// Fonction pour ajouter l'indicateur de fin d'annotation
+function ajouterIndicateurAnnotationTerminée(messageContainer) {
+    const indicator = document.createElement('div');
+    indicator.classList.add('annotation-completed');
+    indicator.innerHTML = '<i class="check-icon">✓</i> Annotation envoyée';
+    messageContainer.appendChild(indicator);
+}
+
+// Fonction pour gérer les messages annotés précédemment
+function marquerMessageCommeAnnoté(messageContainer) {
+    messageContainer.classList.add('annotated', 'user-annotated');
+    
+    // Supprimer tous les contrôles d'annotation
+    const controls = messageContainer.querySelector('.annotation-controls');
+    const interface_annotation = messageContainer.querySelector('.annotation-interface');
+    
+    if (controls) controls.remove();
+    if (interface_annotation) interface_annotation.remove();
+    
+    // Ajouter l'indicateur si pas déjà présent
+    if (!messageContainer.querySelector('.annotation-completed')) {
+        ajouterIndicateurAnnotationTerminée(messageContainer);
     }
 }
 
-// NOUVEAU: Fonction pour marquer un message comme déjà annoté
+// Fonctions de compatibilité avec l'ancien code
+function annoterMessageRecu(messageContainer) {
+    ouvrirInterfaceAnnotation(messageContainer);
+}
+
 function markMessageAsAnnotated(messageContainer) {
-    messageContainer.classList.add('annotated', 'user-annotated');
-    
-    // Supprimer les boutons d'annotation s'ils existent encore
-    const annoterButton = messageContainer.querySelector('.annoter-button');
-    const emojiSelect = messageContainer.querySelector('#emojiSelectAnnotation');
-    const validerButton = messageContainer.querySelector('button');
-    const finAnnotationButton = messageContainer.querySelector('button:last-child');
-    
-    if (annoterButton) messageContainer.removeChild(annoterButton);
-    if (emojiSelect) messageContainer.removeChild(emojiSelect);
-    if (validerButton && validerButton.textContent === 'Valider') messageContainer.removeChild(validerButton);
-    if (finAnnotationButton && finAnnotationButton.textContent === 'Fin annotation') messageContainer.removeChild(finAnnotationButton);
-    
-    // Ajouter un indicateur visuel
-    const annotatedIndicator = document.createElement('div');
-    annotatedIndicator.className = 'annotated-indicator';
-    annotatedIndicator.textContent = '✓ Déjà annoté';
-    annotatedIndicator.style.fontSize = '12px';
-    annotatedIndicator.style.color = '#666';
-    annotatedIndicator.style.fontStyle = 'italic';
-    messageContainer.appendChild(annotatedIndicator);
-    
-    // Réinitialiser les variables d'état si nécessaire
-    annotationEnAttente = false;
-    currentMessageIdForAnnotation = null;
+    marquerMessageCommeAnnoté(messageContainer);
 }
 
 // Auto-scroll au chargement
